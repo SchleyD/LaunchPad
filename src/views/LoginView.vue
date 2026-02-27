@@ -1,9 +1,15 @@
 <script setup lang="ts">
+import { onMounted } from 'vue'
 import { useAuthStore } from '@/stores/auth'
 import { useRouter } from 'vue-router'
 
 const authStore = useAuthStore()
 const router = useRouter()
+
+// Ensure auth store is initialized when login page loads
+onMounted(() => {
+  authStore.initialize()
+})
 
 function handleLogin(userId: string) {
   authStore.login(userId)
@@ -31,7 +37,13 @@ function handleLogin(userId: string) {
           Select User
         </h2>
         
-        <div class="space-y-3">
+        <!-- Loading State -->
+        <div v-if="authStore.isLoading" class="py-8 text-center">
+          <div class="w-8 h-8 border-2 border-primary-500 border-t-transparent rounded-full animate-spin mx-auto mb-3"></div>
+          <p class="text-sm text-surface-500">Loading users...</p>
+        </div>
+        
+        <div v-else class="space-y-3">
           <button
             v-for="user in authStore.users"
             :key="user.id"

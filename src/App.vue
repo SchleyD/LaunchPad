@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { computed } from 'vue'
+import { computed, onMounted } from 'vue'
 import { useRoute } from 'vue-router'
 import AppHeader from './components/AppHeader.vue'
 import AppSidebar from './components/AppSidebar.vue'
@@ -7,6 +7,11 @@ import { useAuthStore } from './stores/auth'
 
 const route = useRoute()
 const authStore = useAuthStore()
+
+// Initialize auth store (loads users/departments from Supabase)
+onMounted(() => {
+  authStore.initialize()
+})
 
 // Don't show header/sidebar on login page
 const showLayout = computed(() => {

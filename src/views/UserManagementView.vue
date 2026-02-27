@@ -77,16 +77,16 @@ function closeModal() {
   editingUser.value = null
 }
 
-function saveUser() {
+async function saveUser() {
   if (isEditing.value && editingUser.value) {
-    authStore.updateUser(editingUser.value.id, {
+    await authStore.updateUser(editingUser.value.id, {
       name: formData.value.name,
       initials: formData.value.initials,
       role: formData.value.role,
       departmentId: formData.value.departmentId
     })
   } else {
-    authStore.createUser({
+    await authStore.createUser({
       name: formData.value.name,
       initials: formData.value.initials,
       role: formData.value.role,
@@ -96,13 +96,13 @@ function saveUser() {
   closeModal()
 }
 
-function confirmDelete(user: User) {
+async function confirmDelete(user: User) {
   if (user.id === authStore.currentUser?.id) {
     alert('You cannot delete your own account.')
     return
   }
   if (confirm(`Are you sure you want to delete ${user.name}?`)) {
-    authStore.deleteUser(user.id)
+    await authStore.deleteUser(user.id)
   }
 }
 
@@ -144,15 +144,15 @@ function closeDeptModal() {
   editingDept.value = null
 }
 
-function saveDepartment() {
+async function saveDepartment() {
   if (isEditingDept.value && editingDept.value) {
-    authStore.updateDepartment(editingDept.value.id, {
+    await authStore.updateDepartment(editingDept.value.id, {
       name: deptFormData.value.name,
       description: deptFormData.value.description || undefined,
       lead: deptFormData.value.lead
     })
   } else {
-    authStore.createDepartment({
+    await authStore.createDepartment({
       name: deptFormData.value.name,
       description: deptFormData.value.description || undefined,
       lead: deptFormData.value.lead
@@ -161,14 +161,14 @@ function saveDepartment() {
   closeDeptModal()
 }
 
-function confirmDeleteDept(dept: Department) {
+async function confirmDeleteDept(dept: Department) {
   const usersInDept = allUsers.value.filter(u => u.departmentId === dept.id).length
   const message = usersInDept > 0 
     ? `Are you sure you want to delete "${dept.name}"? ${usersInDept} user(s) will be unassigned from this department.`
     : `Are you sure you want to delete "${dept.name}"?`
   
   if (confirm(message)) {
-    authStore.deleteDepartment(dept.id)
+    await authStore.deleteDepartment(dept.id)
   }
 }
 

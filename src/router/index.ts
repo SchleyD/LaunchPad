@@ -5,7 +5,7 @@ import PMReviewView from '../views/PMReviewView.vue'
 import TemplateManagementView from '../views/TemplateManagementView.vue'
 import UserManagementView from '../views/UserManagementView.vue'
 import LoginView from '../views/LoginView.vue'
-import { mockUsers } from '../data/mockData'
+import { useAuthStore } from '../stores/auth'
 
 const router = createRouter({
   history: createWebHistory(),
@@ -49,14 +49,8 @@ const router = createRouter({
   ],
 })
 
-// Helper to check if user is a manager (Admin or PM)
-function isUserManager(userId: string): boolean {
-  const user = mockUsers.find(u => u.id === userId)
-  return user?.role === 'Admin' || user?.role === 'PM'
-}
-
 // Navigation guard for authentication and role-based access
-router.beforeEach((to, _from, next) => {
+router.beforeEach(async (to, _from, next) => {
   const currentUserId = localStorage.getItem('currentUserId')
   const isAuthenticated = !!currentUserId
   
@@ -64,9 +58,18 @@ router.beforeEach((to, _from, next) => {
     next({ name: 'login' })
   } else if (to.name === 'login' && isAuthenticated) {
     next({ name: 'projects' })
-  } else if (to.meta.requiresManager && currentUserId && !isUserManager(currentUserId)) {
-    // Redirect non-managers trying to access manager-only pages
-    next({ name: 'projects' })
+  } else if (to.meta.requiresManager && currentUserId) {
+    // Check if user is a manager using auth store
+    const authStore = useAuthStore()
+    await authStore.initialize() // Ensure data is loaded
+    const user = authStore.getUserById(currentUserId)
+    const isManager = user?.role === 'Admin' || user?.role === 'PM'
+    
+    if (!isManager) {
+      next({ name: 'projects' })
+    } else {
+      next()
+    }
   } else {
     next()
   }
