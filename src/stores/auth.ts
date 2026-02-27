@@ -116,6 +116,45 @@ export const useAuthStore = defineStore('auth', () => {
     return true
   }
 
+  // Department management functions (Admin/PM only)
+  function createDepartment(deptData: Omit<Department, 'id'>): Department | null {
+    if (!canManageUsers.value) return null
+    
+    const newDept: Department = {
+      id: `dept-${Date.now()}`,
+      ...deptData
+    }
+    departments.value.push(newDept)
+    return newDept
+  }
+
+  function updateDepartment(deptId: string, updates: Partial<Omit<Department, 'id'>>): boolean {
+    if (!canManageUsers.value) return false
+    
+    const deptIndex = departments.value.findIndex(d => d.id === deptId)
+    if (deptIndex === -1) return false
+    
+    departments.value[deptIndex] = { ...departments.value[deptIndex], ...updates }
+    return true
+  }
+
+  function deleteDepartment(deptId: string): boolean {
+    if (!canManageUsers.value) return false
+    
+    const deptIndex = departments.value.findIndex(d => d.id === deptId)
+    if (deptIndex === -1) return false
+    
+    // Unassign users from this department
+    users.value.forEach(user => {
+      if (user.departmentId === deptId) {
+        user.departmentId = undefined
+      }
+    })
+    
+    departments.value.splice(deptIndex, 1)
+    return true
+  }
+
   return {
     // State
     currentUserId,
@@ -145,5 +184,10 @@ export const useAuthStore = defineStore('auth', () => {
     updateUser,
     deleteUser,
     assignUserToDepartment,
+    
+    // Department management (Admin/PM only)
+    createDepartment,
+    updateDepartment,
+    deleteDepartment,
   }
 })
