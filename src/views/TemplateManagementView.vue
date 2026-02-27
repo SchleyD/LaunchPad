@@ -10,6 +10,9 @@ const store = useProjectStore()
 const editingTemplate = ref<TaskTemplate | null>(null)
 const isCreating = ref(false)
 
+// Filter state
+const filterType = ref<ProjectType | 'All'>('All')
+
 // Form state for create/edit
 const formData = ref({
   title: '',
@@ -28,9 +31,14 @@ const templatesByMilestone = computed(() => {
   milestones.forEach(m => {
     grouped[m] = store.taskTemplates
       .filter(t => t.milestone === m)
+      .filter(t => filterType.value === 'All' || t.projectTypes.includes(filterType.value))
       .sort((a, b) => a.order - b.order)
   })
   return grouped
+})
+
+const totalVisibleTemplates = computed(() => {
+  return Object.values(templatesByMilestone.value).reduce((sum, arr) => sum + arr.length, 0)
 })
 
 function getMilestoneLabel(milestone: number): string {
@@ -147,7 +155,36 @@ function toggleProjectType(type: ProjectType) {
         class="btn-primary"
         :disabled="isCreating || !!editingTemplate"
       >
-        + Add Task Template
+        + Add Task
+      </button>
+    </div>
+
+    <!-- Filter by Project Type -->
+    <div class="flex items-center gap-2 mb-6">
+      <span class="text-sm text-slate-600">Show:</span>
+      <button
+        @click="filterType = 'All'"
+        :class="[
+          'px-3 py-1.5 rounded-md text-sm font-medium transition-colors',
+          filterType === 'All' 
+            ? 'bg-slate-800 text-white' 
+            : 'bg-slate-100 text-slate-600 hover:bg-slate-200'
+        ]"
+      >
+        All ({{ store.taskTemplates.length }})
+      </button>
+      <button
+        v-for="pt in projectTypes"
+        :key="pt.value"
+        @click="filterType = pt.value"
+        :class="[
+          'px-3 py-1.5 rounded-md text-sm font-medium transition-colors',
+          filterType === pt.value 
+            ? getProjectTypeClass(pt.value) + ' ring-2 ring-offset-1 ring-slate-400' 
+            : 'bg-slate-100 text-slate-600 hover:bg-slate-200'
+        ]"
+      >
+        {{ pt.label }} ({{ store.taskTemplates.filter(t => t.projectTypes.includes(pt.value)).length }})
       </button>
     </div>
 
