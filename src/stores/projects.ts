@@ -366,6 +366,7 @@ export const useProjectStore = defineStore('projects', () => {
       status: 'Open',
       blocked: false,
       type: projectTypeMap[payload.projectType],
+      quotedHours: payload.quotedHours || {},
       tasks,
       reviewNotes: [],
       createdAt: new Date(),
