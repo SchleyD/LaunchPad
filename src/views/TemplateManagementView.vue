@@ -1,11 +1,8 @@
 <script setup lang="ts">
 import { ref, computed } from 'vue'
 import { useProjectStore } from '@/stores/projects'
-import { useAuthStore } from '@/stores/auth'
 import type { TaskTemplate, ProjectType, TaskCategory } from '@/types'
 import { projectTypes, taskCategories, mockUsers, mockDepartments } from '@/data/mockData'
-
-const authStore = useAuthStore()
 
 const store = useProjectStore()
 

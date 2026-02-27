@@ -22,12 +22,6 @@ const formData = ref({
 const allUsers = computed(() => authStore.getAllUsers())
 const allDepartments = computed(() => authStore.getAllDepartments())
 
-function getDepartmentName(departmentId: string | undefined): string {
-  if (!departmentId) return 'Unassigned'
-  const dept = authStore.getDepartmentById(departmentId)
-  return dept?.name || 'Unknown'
-}
-
 function getRoleBadgeClass(role: string): string {
   switch (role) {
     case 'Admin':
