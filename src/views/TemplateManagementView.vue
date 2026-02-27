@@ -45,13 +45,6 @@ function getMilestoneLabel(milestone: number): string {
   return labels[milestone] || `${milestone}%`
 }
 
-function getProjectTypeLabels(types: ProjectType[]): string {
-  return types.map(t => {
-    const found = projectTypes.find(pt => pt.value === t)
-    return found?.label || t
-  }).join(', ')
-}
-
 function getAssigneeLabel(assignee: string): string {
   if (assignee === '[ProjectOwner]') return 'Project Owner'
   const user = mockUsers.find(u => u.id === assignee)
@@ -152,7 +145,7 @@ function toggleProjectType(type: ProjectType) {
       <button 
         @click="startCreate"
         class="btn-primary"
-        :disabled="isCreating || editingTemplate"
+        :disabled="isCreating || !!editingTemplate"
       >
         + Add Task Template
       </button>
@@ -321,14 +314,14 @@ function toggleProjectType(type: ProjectType) {
                 <button 
                   @click="startEdit(template)"
                   class="text-sm text-blue-600 hover:text-blue-700 px-2 py-1"
-                  :disabled="isCreating || editingTemplate"
+                  :disabled="isCreating || !!editingTemplate"
                 >
                   Edit
                 </button>
                 <button 
                   @click="deleteTemplate(template.id)"
                   class="text-sm text-red-600 hover:text-red-700 px-2 py-1"
-                  :disabled="isCreating || editingTemplate"
+                  :disabled="isCreating || !!editingTemplate"
                 >
                   Delete
                 </button>
