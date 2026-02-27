@@ -2,6 +2,7 @@ import { defineStore } from 'pinia'
 import { ref, computed } from 'vue'
 import type { Project, Task, TaskStatus, TimeEntry, TimeCategory, ReviewNote, ProjectChangeSummary, TaskTemplate, ProjectType, ProjectCreatePayload } from '@/types'
 import { mockProjects, mockTaskTemplates } from '@/data/mockData'
+import { useAuthStore } from './auth'
 
 export const useProjectStore = defineStore('projects', () => {
   // State
@@ -100,6 +101,7 @@ export const useProjectStore = defineStore('projects', () => {
     category: TimeCategory, 
     note: string
   ) {
+    const authStore = useAuthStore()
     const project = projects.value.find(p => p.id === projectId)
     if (!project) return
 
@@ -112,7 +114,7 @@ export const useProjectStore = defineStore('projects', () => {
       category,
       note,
       createdAt: new Date(),
-      createdBy: 'KH' // Current user
+      createdBy: authStore.currentUser?.initials || 'Unknown'
     }
 
     task.timeEntries.push(entry)
@@ -121,6 +123,7 @@ export const useProjectStore = defineStore('projects', () => {
   }
 
   function addTaskComment(projectId: string, taskId: string, text: string) {
+    const authStore = useAuthStore()
     const project = projects.value.find(p => p.id === projectId)
     if (!project) return
 
@@ -131,12 +134,13 @@ export const useProjectStore = defineStore('projects', () => {
       id: `c-${Date.now()}`,
       text,
       createdAt: new Date(),
-      createdBy: 'KH'
+      createdBy: authStore.currentUser?.initials || 'Unknown'
     })
     task.updatedAt = new Date()
   }
 
   function addReviewNote(projectId: string, text: string) {
+    const authStore = useAuthStore()
     const project = projects.value.find(p => p.id === projectId)
     if (!project) return
 
@@ -146,13 +150,14 @@ export const useProjectStore = defineStore('projects', () => {
       text,
       isReviewed: false,
       createdAt: new Date(),
-      createdBy: 'KH'
+      createdBy: authStore.currentUser?.initials || 'Unknown'
     }
 
     project.reviewNotes.push(note)
   }
 
   function markNoteAsReviewed(projectId: string, noteId: string) {
+    const authStore = useAuthStore()
     const project = projects.value.find(p => p.id === projectId)
     if (!project) return
 
@@ -161,10 +166,11 @@ export const useProjectStore = defineStore('projects', () => {
 
     note.isReviewed = true
     note.reviewedAt = new Date()
-    note.reviewedBy = 'KH'
+    note.reviewedBy = authStore.currentUser?.initials || 'Unknown'
   }
 
   function convertNoteToTask(projectId: string, noteId: string) {
+    const authStore = useAuthStore()
     const project = projects.value.find(p => p.id === projectId)
     if (!project) return
 
@@ -190,7 +196,7 @@ export const useProjectStore = defineStore('projects', () => {
     project.tasks.push(newTask)
     note.isReviewed = true
     note.reviewedAt = new Date()
-    note.reviewedBy = 'KH'
+    note.reviewedBy = authStore.currentUser?.initials || 'Unknown'
   }
 
   function addTask(projectId: string, task: Omit<Task, 'id' | 'projectId' | 'timeEntries' | 'comments' | 'createdAt' | 'updatedAt'>) {

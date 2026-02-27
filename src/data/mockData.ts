@@ -1,10 +1,32 @@
-import type { Project, Task, User, ReviewNote, TaskTemplate, ProjectType } from '@/types'
+import type { Project, Task, User, ReviewNote, TaskTemplate, ProjectType, Department } from '@/types'
+
+// Departments
+export const mockDepartments: Department[] = [
+  { 
+    id: 'dept-pm', 
+    name: 'Project Management', 
+    description: 'Oversees project planning, coordination, and customer communication',
+    lead: 'kh' 
+  },
+  { 
+    id: 'dept-field', 
+    name: 'Field Services', 
+    description: 'Handles on-site installations, training, and customer support',
+    lead: 'rb' 
+  },
+  { 
+    id: 'dept-prod', 
+    name: 'Production', 
+    description: 'Manages hardware staging, testing, and build processes',
+    lead: 'jm' 
+  },
+]
 
 export const mockUsers: User[] = [
-  { id: 'kh', name: 'Kevin H.', initials: 'KH', role: 'PM' },
-  { id: 'rb', name: 'Ryan B.', initials: 'RB', role: 'Technician' },
-  { id: 'es', name: 'Eric S.', initials: 'ES', role: 'Technician' },
-  { id: 'jm', name: 'Josh M.', initials: 'JM', role: 'Admin' },
+  { id: 'kh', name: 'Kevin H.', initials: 'KH', role: 'PM', departmentId: 'dept-pm' },
+  { id: 'rb', name: 'Ryan B.', initials: 'RB', role: 'Technician', departmentId: 'dept-field' },
+  { id: 'es', name: 'Eric S.', initials: 'ES', role: 'Technician', departmentId: 'dept-field' },
+  { id: 'jm', name: 'Josh M.', initials: 'JM', role: 'Admin', departmentId: 'dept-prod' },
 ]
 
 const createDate = (daysAgo: number): Date => {
@@ -496,6 +518,7 @@ export const mockTaskTemplates: TaskTemplate[] = [
     category: 'Setup',
     estimatedHours: 1,
     assignee: 'jm', // Specific: Josh M. (Admin/Production)
+    departmentId: 'dept-prod', // Production department
     order: 1,
     createdAt: createDate(100),
     updatedAt: createDate(100)
@@ -534,6 +557,7 @@ export const mockTaskTemplates: TaskTemplate[] = [
     category: 'Installation',
     estimatedHours: 6,
     assignee: 'jm', // Specific: Josh M. (Production)
+    departmentId: 'dept-prod', // Production department
     order: 2,
     createdAt: createDate(100),
     updatedAt: createDate(100)
