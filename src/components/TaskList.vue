@@ -267,4 +267,3 @@ const getTotalTime = (task: Task): number => {
     </div>
   </div>
 </template>
-</script>
