@@ -13,9 +13,10 @@ onMounted(() => {
   authStore.initialize()
 })
 
-// Don't show header/sidebar on login page
+// Show layout on all pages except login
+// Auth check is handled by router guards
 const showLayout = computed(() => {
-  return route.name !== 'login' && authStore.isAuthenticated
+  return route.name !== 'login'
 })
 </script>
 
