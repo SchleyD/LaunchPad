@@ -37,10 +37,6 @@ const templatesByMilestone = computed(() => {
   return grouped
 })
 
-const totalVisibleTemplates = computed(() => {
-  return Object.values(templatesByMilestone.value).reduce((sum, arr) => sum + arr.length, 0)
-})
-
 function getMilestoneLabel(milestone: number): string {
   const labels: Record<number, string> = {
     20: '20% - Project Kickoff',
