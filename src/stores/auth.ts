@@ -3,6 +3,9 @@ import { ref, computed } from 'vue'
 import type { User, Department } from '@/types'
 import { mockUsers, mockDepartments } from '@/data/mockData'
 
+// Roles that have management capabilities
+const MANAGEMENT_ROLES = ['Admin', 'PM'] as const
+
 export const useAuthStore = defineStore('auth', () => {
   // State
   const currentUserId = ref<string | null>(localStorage.getItem('currentUserId'))
@@ -21,6 +24,18 @@ export const useAuthStore = defineStore('auth', () => {
     if (!currentUser.value?.departmentId) return null
     return departments.value.find(d => d.id === currentUser.value?.departmentId) || null
   })
+
+  // Role-based permissions
+  const isManager = computed(() => {
+    if (!currentUser.value) return false
+    return MANAGEMENT_ROLES.includes(currentUser.value.role as typeof MANAGEMENT_ROLES[number])
+  })
+
+  const canAccessPMReview = computed(() => isManager.value)
+  
+  const canManageUsers = computed(() => isManager.value)
+  
+  const canManageTemplates = computed(() => isManager.value)
 
   // Actions
   function login(userId: string) {
@@ -58,6 +73,49 @@ export const useAuthStore = defineStore('auth', () => {
     return departments.value
   }
 
+  // User management functions (Admin/PM only)
+  function createUser(userData: Omit<User, 'id'>): User | null {
+    if (!canManageUsers.value) return null
+    
+    const newUser: User = {
+      id: `user-${Date.now()}`,
+      ...userData
+    }
+    users.value.push(newUser)
+    return newUser
+  }
+
+  function updateUser(userId: string, updates: Partial<Omit<User, 'id'>>): boolean {
+    if (!canManageUsers.value) return false
+    
+    const userIndex = users.value.findIndex(u => u.id === userId)
+    if (userIndex === -1) return false
+    
+    users.value[userIndex] = { ...users.value[userIndex], ...updates }
+    return true
+  }
+
+  function deleteUser(userId: string): boolean {
+    if (!canManageUsers.value) return false
+    if (userId === currentUserId.value) return false // Can't delete yourself
+    
+    const userIndex = users.value.findIndex(u => u.id === userId)
+    if (userIndex === -1) return false
+    
+    users.value.splice(userIndex, 1)
+    return true
+  }
+
+  function assignUserToDepartment(userId: string, departmentId: string | undefined): boolean {
+    if (!canManageUsers.value) return false
+    
+    const user = users.value.find(u => u.id === userId)
+    if (!user) return false
+    
+    user.departmentId = departmentId
+    return true
+  }
+
   return {
     // State
     currentUserId,
@@ -68,6 +126,10 @@ export const useAuthStore = defineStore('auth', () => {
     currentUser,
     isAuthenticated,
     currentUserDepartment,
+    isManager,
+    canAccessPMReview,
+    canManageUsers,
+    canManageTemplates,
     
     // Actions
     login,
@@ -77,5 +139,11 @@ export const useAuthStore = defineStore('auth', () => {
     getUsersByDepartment,
     getAllUsers,
     getAllDepartments,
+    
+    // User management (Admin/PM only)
+    createUser,
+    updateUser,
+    deleteUser,
+    assignUserToDepartment,
   }
 })
