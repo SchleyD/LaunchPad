@@ -42,6 +42,7 @@ export interface Task {
   projectId: string
   title: string
   owner: string
+  departmentId?: string // Optional department assignment
   status: TaskStatus
   milestone: number // 20, 40, 60, 80, 90, 100
   category: TaskCategory
@@ -101,12 +102,21 @@ export interface ProjectChangeSummary {
   unreviewedNotes: number
 }
 
+// Department type
+export interface Department {
+  id: string
+  name: string
+  description?: string
+  lead?: string // User ID of department head
+}
+
 // User type for mock data
 export interface User {
   id: string
   name: string
   initials: string
   role: 'PM' | 'Technician' | 'Admin'
+  departmentId?: string // Which department they belong to
 }
 
 // Template System Types
@@ -114,6 +124,9 @@ export type ProjectType = 'SoftwareOnly' | 'HardwareOnly' | 'HardwareSoftware'
 
 // Assignee can be '[ProjectOwner]' for dynamic assignment or a specific user ID
 export type TemplateAssignee = '[ProjectOwner]' | string
+
+// Department assignment can be a department ID or '[ProjectOwner]' for dynamic assignment
+export type TemplateDepartment = string | null
 
 export interface TaskTemplate {
   id: string
@@ -123,6 +136,7 @@ export interface TaskTemplate {
   category: TaskCategory
   estimatedHours: number
   assignee: TemplateAssignee // '[ProjectOwner]' or specific user ID like 'rb'
+  departmentId?: TemplateDepartment // Optional department assignment for template
   order: number // For sorting within milestone
   createdAt: Date
   updatedAt: Date

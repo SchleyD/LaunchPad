@@ -1,8 +1,11 @@
 <script setup lang="ts">
 import { ref, computed } from 'vue'
 import { useProjectStore } from '@/stores/projects'
+import { useAuthStore } from '@/stores/auth'
 import type { TaskTemplate, ProjectType, TaskCategory } from '@/types'
-import { projectTypes, taskCategories, mockUsers } from '@/data/mockData'
+import { projectTypes, taskCategories, mockUsers, mockDepartments } from '@/data/mockData'
+
+const authStore = useAuthStore()
 
 const store = useProjectStore()
 
@@ -20,7 +23,8 @@ const formData = ref({
   milestone: 20,
   category: 'Setup' as TaskCategory,
   estimatedHours: 1,
-  assignee: '[ProjectOwner]' as string
+  assignee: '[ProjectOwner]' as string,
+  departmentId: null as string | null
 })
 
 // Group templates by milestone
@@ -55,6 +59,12 @@ function getAssigneeLabel(assignee: string): string {
   return user?.name || assignee
 }
 
+function getDepartmentLabel(departmentId: string | null | undefined): string {
+  if (!departmentId) return 'None'
+  const dept = mockDepartments.find(d => d.id === departmentId)
+  return dept?.name || departmentId
+}
+
 function getProjectTypeClass(type: ProjectType): string {
   const classes: Record<ProjectType, string> = {
     'SoftwareOnly': 'bg-blue-100 text-blue-800',
@@ -73,7 +83,8 @@ function startCreate() {
     milestone: 20,
     category: 'Setup',
     estimatedHours: 1,
-    assignee: '[ProjectOwner]'
+    assignee: '[ProjectOwner]',
+    departmentId: null
   }
 }
 
@@ -86,7 +97,8 @@ function startEdit(template: TaskTemplate) {
     milestone: template.milestone,
     category: template.category,
     estimatedHours: template.estimatedHours,
-    assignee: template.assignee
+    assignee: template.assignee,
+    departmentId: template.departmentId || null
   }
 }
 
@@ -103,7 +115,8 @@ function saveTemplate() {
       milestone: formData.value.milestone,
       category: formData.value.category,
       estimatedHours: formData.value.estimatedHours,
-      assignee: formData.value.assignee
+      assignee: formData.value.assignee,
+      departmentId: formData.value.departmentId
     })
   } else if (editingTemplate.value) {
     store.updateTaskTemplate(editingTemplate.value.id, {
@@ -112,7 +125,8 @@ function saveTemplate() {
       milestone: formData.value.milestone,
       category: formData.value.category,
       estimatedHours: formData.value.estimatedHours,
-      assignee: formData.value.assignee
+      assignee: formData.value.assignee,
+      departmentId: formData.value.departmentId
     })
   }
   cancelEdit()
@@ -279,6 +293,23 @@ function toggleProjectType(type: ProjectType) {
             "Project Owner" assigns to whoever owns the project. Specific names always go to that person.
           </p>
         </div>
+
+        <!-- Department -->
+        <div>
+          <label class="block text-sm font-medium text-slate-700 mb-1">Department</label>
+          <select 
+            v-model="formData.departmentId"
+            class="w-full px-3 py-2 border border-slate-300 rounded-md text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
+          >
+            <option :value="null">No Department</option>
+            <option v-for="dept in mockDepartments" :key="dept.id" :value="dept.id">
+              {{ dept.name }}
+            </option>
+          </select>
+          <p class="text-xs text-slate-500 mt-1">
+            Optional: Assign this task to a department for workload tracking.
+          </p>
+        </div>
       </div>
 
       <div class="flex justify-end gap-3 mt-6 pt-4 border-t border-slate-200">
@@ -323,7 +354,7 @@ function toggleProjectType(type: ProjectType) {
                     {{ template.category }}
                   </span>
                 </div>
-                <div class="flex items-center gap-3 mt-1.5 text-xs text-slate-500">
+                <div class="flex items-center gap-3 mt-1.5 text-xs text-slate-500 flex-wrap">
                   <span>{{ template.estimatedHours }}h estimated</span>
                   <span class="text-slate-300">|</span>
                   <span>
@@ -332,6 +363,15 @@ function toggleProjectType(type: ProjectType) {
                       {{ getAssigneeLabel(template.assignee) }}
                     </span>
                   </span>
+                  <template v-if="template.departmentId">
+                    <span class="text-slate-300">|</span>
+                    <span>
+                      Dept: 
+                      <span class="text-emerald-600 font-medium">
+                        {{ getDepartmentLabel(template.departmentId) }}
+                      </span>
+                    </span>
+                  </template>
                 </div>
                 <div class="flex gap-1.5 mt-2">
                   <span 
