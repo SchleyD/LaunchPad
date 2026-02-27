@@ -1,8 +1,8 @@
 <script setup lang="ts">
 import { ref, computed, watch } from 'vue'
 import { useProjectStore } from '@/stores/projects'
-import type { ProjectType, LeadTimeType } from '@/types'
-import { projectTypes, mockUsers } from '@/data/mockData'
+import type { ProjectType, LeadTimeType, QuotedHours, TimeCategory } from '@/types'
+import { projectTypes, mockUsers, timeCategories } from '@/data/mockData'
 
 const props = defineProps<{
   open: boolean
@@ -25,6 +25,16 @@ const formData = ref({
   owner: '',
   reseller: '',
   scaleDealer: ''
+})
+
+// Quoted hours per category
+const quotedHours = ref<Record<string, number | null>>({
+  'PM Time': null,
+  'Application Management / Install': null,
+  'Build Time': null,
+  'DB Conversion': null,
+  'Onsite Install – Work': null,
+  'Onsite Install – Travel': null
 })
 
 // Validation
@@ -76,6 +86,14 @@ function resetForm() {
     reseller: '',
     scaleDealer: ''
   }
+  quotedHours.value = {
+    'PM Time': null,
+    'Application Management / Install': null,
+    'Build Time': null,
+    'DB Conversion': null,
+    'Onsite Install – Work': null,
+    'Onsite Install – Travel': null
+  }
   errors.value = {}
 }
 
@@ -87,6 +105,14 @@ function handleClose() {
 function handleSubmit() {
   if (!isValid.value) return
   
+  // Build quoted hours object (only include non-null values)
+  const quotedHoursPayload: QuotedHours = {}
+  for (const [category, hours] of Object.entries(quotedHours.value)) {
+    if (hours !== null && hours > 0) {
+      quotedHoursPayload[category as TimeCategory] = hours
+    }
+  }
+  
   const projectId = store.createProjectFromTemplate({
     name: formData.value.name,
     customer: formData.value.customer,
@@ -96,7 +122,8 @@ function handleSubmit() {
     leadTimeType: getLeadTimeType(formData.value.projectType),
     owner: formData.value.owner,
     reseller: formData.value.reseller || undefined,
-    scaleDealer: formData.value.scaleDealer || undefined
+    scaleDealer: formData.value.scaleDealer || undefined,
+    quotedHours: quotedHoursPayload
   })
   
   emit('created', projectId)
@@ -245,6 +272,24 @@ watch(() => props.open, (isOpen) => {
                   class="w-full px-3 py-2 border border-slate-300 rounded-md text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
                   placeholder="Scale dealer name"
                 />
+              </div>
+            </div>
+
+            <!-- Quoted Hours -->
+            <div class="mt-6 pt-4 border-t border-slate-200">
+              <h3 class="text-sm font-medium text-slate-700 mb-3">Quoted Hours by Category</h3>
+              <div class="grid grid-cols-2 gap-3">
+                <div v-for="category in timeCategories" :key="category" class="flex items-center gap-2">
+                  <input 
+                    v-model.number="quotedHours[category]"
+                    type="number"
+                    min="0"
+                    step="0.5"
+                    class="w-20 px-2 py-1.5 border border-slate-300 rounded text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                    placeholder="0"
+                  />
+                  <label class="text-xs text-slate-600 truncate">{{ category }}</label>
+                </div>
               </div>
             </div>
 

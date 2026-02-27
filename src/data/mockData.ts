@@ -373,6 +373,14 @@ export const mockProjects: Project[] = [
     status: 'Open',
     blocked: true,
     type: 'Hardware',
+    quotedHours: {
+      'PM Time': 8,
+      'Application Management / Install': 12,
+      'Build Time': 10,
+      'DB Conversion': 6,
+      'Onsite Install – Work': 16,
+      'Onsite Install – Travel': 4
+    },
     tasks: haasAndSonsTasks,
     reviewNotes: haasReviewNotes,
     createdAt: createDate(40),
@@ -390,6 +398,11 @@ export const mockProjects: Project[] = [
     status: 'Open',
     blocked: false,
     type: 'SoftwareOnly',
+    quotedHours: {
+      'PM Time': 6,
+      'Application Management / Install': 10,
+      'DB Conversion': 8
+    },
     tasks: knightHawkTasks,
     reviewNotes: knightHawkReviewNotes,
     createdAt: createDate(30),

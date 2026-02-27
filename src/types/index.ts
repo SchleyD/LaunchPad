@@ -63,6 +63,9 @@ export interface ReviewNote {
   reviewedBy?: string
 }
 
+// Quoted hours per time category for a project
+export type QuotedHours = Partial<Record<TimeCategory, number>>
+
 export interface Project {
   id: string
   name: string
@@ -77,6 +80,7 @@ export interface Project {
   status: ProjectStatus
   blocked: boolean
   type: 'Hardware' | 'SoftwareOnly'
+  quotedHours: QuotedHours // Hours quoted/budgeted per category
   tasks: Task[]
   reviewNotes: ReviewNote[]
   createdAt: Date
@@ -134,4 +138,5 @@ export interface ProjectCreatePayload {
   owner: string // User ID
   reseller?: string
   scaleDealer?: string
+  quotedHours?: QuotedHours
 }

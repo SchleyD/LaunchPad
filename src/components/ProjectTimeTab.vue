@@ -3,6 +3,7 @@ import { computed } from 'vue'
 import { useProjectStore } from '@/stores/projects'
 import type { Project, TimeCategory } from '@/types'
 import { format } from 'date-fns'
+import { timeCategories } from '@/data/mockData'
 
 interface Props {
   project: Project
@@ -13,6 +14,57 @@ const store = useProjectStore()
 
 const totalTime = computed(() => store.getTotalTimeForProject(props.project.id))
 const timeByCategory = computed(() => store.getTimeByCategory(props.project.id))
+
+// Calculate total quoted hours
+const totalQuoted = computed(() => {
+  return Object.values(props.project.quotedHours || {}).reduce((sum, h) => sum + (h || 0), 0)
+})
+
+// Get all categories (both quoted and used)
+const allCategories = computed(() => {
+  const categories = new Set<TimeCategory>()
+  
+  // Add categories with quoted hours
+  Object.keys(props.project.quotedHours || {}).forEach(cat => {
+    categories.add(cat as TimeCategory)
+  })
+  
+  // Add categories with logged hours
+  Object.keys(timeByCategory.value).forEach(cat => {
+    categories.add(cat as TimeCategory)
+  })
+  
+  // Sort by the order in timeCategories
+  return Array.from(categories).sort((a, b) => {
+    const aIndex = timeCategories.indexOf(a as any)
+    const bIndex = timeCategories.indexOf(b as any)
+    return aIndex - bIndex
+  })
+})
+
+// Calculate percentage used for a category
+function getPercentUsed(category: TimeCategory): number {
+  const quoted = props.project.quotedHours?.[category] || 0
+  const used = timeByCategory.value[category] || 0
+  if (quoted === 0) return used > 0 ? 100 : 0
+  return Math.round((used / quoted) * 100)
+}
+
+// Get status color based on percentage
+function getStatusColor(category: TimeCategory): string {
+  const percent = getPercentUsed(category)
+  if (percent >= 100) return 'text-red-600'
+  if (percent >= 80) return 'text-amber-600'
+  return 'text-emerald-600'
+}
+
+// Get progress bar color
+function getProgressBarColor(category: TimeCategory): string {
+  const percent = getPercentUsed(category)
+  if (percent >= 100) return 'bg-red-500'
+  if (percent >= 80) return 'bg-amber-500'
+  return 'bg-emerald-500'
+}
 
 const allTimeEntries = computed(() => {
   const entries: Array<{
@@ -59,35 +111,63 @@ const categoryColors: Record<string, string> = {
 <template>
   <div class="space-y-6">
     <!-- Summary Cards -->
-    <div class="grid grid-cols-2 gap-4">
+    <div class="grid grid-cols-3 gap-4">
       <div class="card p-4">
-        <div class="text-sm text-surface-500 mb-1">Total Time Logged</div>
-        <div class="text-2xl font-semibold text-surface-900">{{ totalTime }}h</div>
+        <div class="text-sm text-surface-500 mb-1">Quoted Hours</div>
+        <div class="text-2xl font-semibold text-surface-900">{{ totalQuoted }}h</div>
       </div>
       <div class="card p-4">
-        <div class="text-sm text-surface-500 mb-1">Time Entries</div>
-        <div class="text-2xl font-semibold text-surface-900">{{ allTimeEntries.length }}</div>
+        <div class="text-sm text-surface-500 mb-1">Hours Used</div>
+        <div class="text-2xl font-semibold" :class="totalTime > totalQuoted ? 'text-red-600' : 'text-surface-900'">
+          {{ totalTime }}h
+        </div>
+      </div>
+      <div class="card p-4">
+        <div class="text-sm text-surface-500 mb-1">Remaining</div>
+        <div class="text-2xl font-semibold" :class="totalQuoted - totalTime < 0 ? 'text-red-600' : 'text-emerald-600'">
+          {{ totalQuoted - totalTime }}h
+        </div>
       </div>
     </div>
 
-    <!-- Time by Category -->
+    <!-- Hours by Category - Quoted vs Used -->
     <div class="card p-4">
-      <h3 class="font-medium text-surface-900 mb-4">Time by Category</h3>
-      <div class="space-y-3">
+      <h3 class="font-medium text-surface-900 mb-4">Hours by Category</h3>
+      <div class="space-y-4">
         <div 
-          v-for="(hours, category) in timeByCategory" 
+          v-for="category in allCategories" 
           :key="category"
-          class="flex items-center justify-between"
+          class="space-y-2"
         >
-          <div class="flex items-center gap-2">
+          <div class="flex items-center justify-between">
             <span :class="['badge text-xs', categoryColors[category] || 'bg-surface-100 text-surface-600']">
               {{ category }}
             </span>
+            <div class="flex items-center gap-3 text-sm">
+              <span class="text-surface-500">
+                <span :class="getStatusColor(category)" class="font-medium">{{ timeByCategory[category] || 0 }}h</span>
+                <span class="text-surface-400"> / </span>
+                <span>{{ project.quotedHours?.[category] || 0 }}h quoted</span>
+              </span>
+              <span :class="[getStatusColor(category), 'font-medium text-xs w-12 text-right']">
+                {{ getPercentUsed(category) }}%
+              </span>
+            </div>
           </div>
-          <span class="font-medium text-surface-700">{{ hours }}h</span>
+          <!-- Progress bar -->
+          <div class="h-2 bg-surface-100 rounded-full overflow-hidden">
+            <div 
+              :class="['h-full rounded-full transition-all', getProgressBarColor(category)]"
+              :style="{ width: Math.min(getPercentUsed(category), 100) + '%' }"
+            />
+          </div>
+          <!-- Over budget indicator -->
+          <div v-if="getPercentUsed(category) > 100" class="text-xs text-red-600">
+            {{ (timeByCategory[category] || 0) - (project.quotedHours?.[category] || 0) }}h over budget
+          </div>
         </div>
-        <div v-if="Object.keys(timeByCategory).length === 0" class="text-sm text-surface-400 text-center py-4">
-          No time logged yet
+        <div v-if="allCategories.length === 0" class="text-sm text-surface-400 text-center py-4">
+          No hours quoted or logged yet
         </div>
       </div>
     </div>
