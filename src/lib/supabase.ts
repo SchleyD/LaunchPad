@@ -1,14 +1,14 @@
 import { createClient } from '@supabase/supabase-js'
 
-const supabaseUrl = import.meta.env.VITE_SUPABASE_URL
-const supabaseAnonKey = import.meta.env.VITE_SUPABASE_ANON_KEY
+const supabaseUrl = import.meta.env.VITE_SUPABASE_URL as string | undefined
+const supabaseAnonKey = import.meta.env.VITE_SUPABASE_ANON_KEY as string | undefined
 
-if (!supabaseUrl || !supabaseAnonKey) {
-  console.warn('[v0] Supabase credentials not found. Using mock data fallback.')
-}
+export const isSupabaseConfigured = !!(supabaseUrl && supabaseAnonKey)
 
-export const supabase = supabaseUrl && supabaseAnonKey 
-  ? createClient(supabaseUrl, supabaseAnonKey)
+export const supabase = isSupabaseConfigured
+  ? createClient(supabaseUrl!, supabaseAnonKey!)
   : null
 
-export const isSupabaseConfigured = !!supabase
+if (!isSupabaseConfigured) {
+  console.warn('[v0] Supabase credentials not found. Using mock data fallback.')
+}
