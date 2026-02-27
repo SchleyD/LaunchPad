@@ -6,11 +6,13 @@ import type { ProjectChangeSummary } from '@/types'
 import { format, subDays } from 'date-fns'
 import ProgressBar from '@/components/ProgressBar.vue'
 import ReviewNoteCard from '@/components/ReviewNoteCard.vue'
+import { mockUsers } from '@/data/mockData'
 
 const router = useRouter()
 const store = useProjectStore()
 
 const comparisonDate = ref<string>(format(subDays(new Date(), 7), 'yyyy-MM-dd'))
+const filterOwner = ref<string>('All')
 
 const projectsForReview = computed(() => {
   // Active projects + recently closed
@@ -23,21 +25,29 @@ const projectSummaries = computed((): ProjectChangeSummary[] => {
   return projectsForReview.value.map(p => store.getProjectChangeSummary(p))
 })
 
-// Sort: Blocked first, then by unreviewed notes, then by progress change
+// Filter by owner then sort: Blocked first, then by unreviewed notes, then by progress change
 const sortedSummaries = computed(() => {
-  return [...projectSummaries.value].sort((a, b) => {
-    // Blocked projects first
-    if (a.hasBlockedTasks && !b.hasBlockedTasks) return -1
-    if (!a.hasBlockedTasks && b.hasBlockedTasks) return 1
-    
-    // Then by unreviewed notes
-    if (a.unreviewedNotes !== b.unreviewedNotes) {
-      return b.unreviewedNotes - a.unreviewedNotes
-    }
-    
-    // Then by progress change (ascending - stalled projects first)
-    return a.progressChange - b.progressChange
-  })
+  return [...projectSummaries.value]
+    .filter(s => filterOwner.value === 'All' || s.project.owner === filterOwner.value)
+    .sort((a, b) => {
+      // Blocked projects first
+      if (a.hasBlockedTasks && !b.hasBlockedTasks) return -1
+      if (!a.hasBlockedTasks && b.hasBlockedTasks) return 1
+      
+      // Then by unreviewed notes
+      if (a.unreviewedNotes !== b.unreviewedNotes) {
+        return b.unreviewedNotes - a.unreviewedNotes
+      }
+      
+      // Then by progress change (ascending - stalled projects first)
+      return a.progressChange - b.progressChange
+    })
+})
+
+// Get unique owners from active projects for filter
+const projectOwners = computed(() => {
+  const owners = new Set(projectsForReview.value.map(p => p.owner))
+  return mockUsers.filter(u => owners.has(u.initials))
 })
 
 const totalUnreviewedNotes = computed(() => {
@@ -87,6 +97,38 @@ function isExpanded(projectId: string): boolean {
     <div class="mb-6">
       <h1 class="text-2xl font-semibold text-surface-900">PM Review</h1>
       <p class="text-sm text-surface-500 mt-1">Weekly project status review</p>
+    </div>
+
+    <!-- Owner Filter -->
+    <div class="flex items-center gap-2 mb-6">
+      <span class="text-sm text-surface-600">Filter by Owner:</span>
+      <button
+        @click="filterOwner = 'All'"
+        :class="[
+          'px-3 py-1.5 rounded-md text-sm font-medium transition-colors',
+          filterOwner === 'All' 
+            ? 'bg-slate-800 text-white' 
+            : 'bg-slate-100 text-slate-600 hover:bg-slate-200'
+        ]"
+      >
+        All ({{ projectSummaries.length }})
+      </button>
+      <button
+        v-for="owner in projectOwners"
+        :key="owner.id"
+        @click="filterOwner = owner.initials"
+        :class="[
+          'px-3 py-1.5 rounded-md text-sm font-medium transition-colors flex items-center gap-2',
+          filterOwner === owner.initials 
+            ? 'bg-primary-600 text-white' 
+            : 'bg-slate-100 text-slate-600 hover:bg-slate-200'
+        ]"
+      >
+        <span class="w-5 h-5 bg-white/20 rounded-full flex items-center justify-center text-[10px]">
+          {{ owner.initials }}
+        </span>
+        {{ owner.name }} ({{ projectSummaries.filter(s => s.project.owner === owner.initials).length }})
+      </button>
     </div>
 
     <!-- Summary Stats -->
