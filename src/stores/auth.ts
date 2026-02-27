@@ -20,8 +20,11 @@ export const useAuthStore = defineStore('auth', () => {
     if (isInitialized.value) return
     isLoading.value = true
     
+    console.log('[v0] Initializing auth store, Supabase configured:', isSupabaseConfigured)
+    
     try {
       if (isSupabaseConfigured && supabase) {
+        console.log('[v0] Fetching data from Supabase...')
         // Fetch departments
         const { data: deptData, error: deptError } = await supabase
           .from('departments')
@@ -52,8 +55,11 @@ export const useAuthStore = defineStore('auth', () => {
           role: u.role as 'PM' | 'Technician' | 'Admin',
           departmentId: u.department_id
         }))
+        
+        console.log('[v0] Loaded from Supabase - Users:', users.value.length, 'Departments:', departments.value.length)
       } else {
         // Fallback to mock data
+        console.log('[v0] Supabase not configured, using mock data')
         users.value = mockUsers
         departments.value = mockDepartments
       }
