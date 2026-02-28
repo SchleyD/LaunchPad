@@ -409,16 +409,24 @@ export const useProjectStore = defineStore('projects', () => {
     }
   }
 
+  // Generate UUID
+  function generateUUID(): string {
+    return 'xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx'.replace(/[xy]/g, function(c) {
+      const r = Math.random() * 16 | 0
+      const v = c === 'x' ? r : (r & 0x3 | 0x8)
+      return v.toString(16)
+    })
+  }
+
   // Project Creation from Template
-  function createProjectFromTemplate(payload: ProjectCreatePayload): string {
-    const projectId = `p-${Date.now()}`
+  async function createProjectFromTemplate(payload: ProjectCreatePayload): Promise<string> {
+    const projectId = generateUUID()
     
     // Get templates for this project type
     const templates = getTemplatesForProjectType(payload.projectType)
     
     // Create tasks from templates (including subtasks)
     const tasks: Task[] = []
-    let taskIndex = 0
     
     templates.forEach((template) => {
       // Determine assignee: '[ProjectOwner]' maps to project owner, otherwise use specific assignee
@@ -426,8 +434,7 @@ export const useProjectStore = defineStore('projects', () => {
         ? payload.owner.toUpperCase() 
         : template.assignee.toUpperCase()
 
-      const parentTaskId = `t-${Date.now()}-${taskIndex}`
-      taskIndex++
+      const parentTaskId = generateUUID()
 
       // Create parent task
       const parentTask: Task = {
@@ -455,7 +462,7 @@ export const useProjectStore = defineStore('projects', () => {
             : subtaskTemplate.assignee.toUpperCase()
 
           const subtask: Task = {
-            id: `t-${Date.now()}-${taskIndex}`,
+            id: generateUUID(),
             projectId,
             parentTaskId,
             title: subtaskTemplate.title,
@@ -471,7 +478,6 @@ export const useProjectStore = defineStore('projects', () => {
             updatedAt: new Date()
           }
           tasks.push(subtask)
-          taskIndex++
         })
       }
     })
@@ -504,9 +510,57 @@ export const useProjectStore = defineStore('projects', () => {
       updatedAt: new Date()
     }
 
+    // Save to Supabase if available
+    if (supabase) {
+      try {
+        // Insert project
+        const { error: projectError } = await supabase
+          .from('projects')
+          .insert({
+            id: projectId,
+            name: payload.name,
+            customer: payload.customer,
+            work_order_id: payload.workOrderId,
+            order_date: payload.orderDate.toISOString().split('T')[0],
+            project_type: payload.projectType,
+            reseller: payload.reseller || null,
+            scale_dealer: payload.scaleDealer || null,
+            status: 'Open',
+            blocked: false,
+            quoted_hours: payload.quotedHours || {}
+          })
+        
+        if (projectError) {
+          console.error('[v0] Error saving project:', projectError)
+        }
+
+        // Insert tasks
+        const taskInserts = tasks.map(task => ({
+          id: task.id,
+          project_id: projectId,
+          parent_task_id: task.parentTaskId || null,
+          title: task.title,
+          status: task.status,
+          phase: task.phase || null,
+          milestone: task.milestone,
+          category: task.category,
+          estimated_hours: task.estimatedHours
+        }))
+
+        const { error: tasksError } = await supabase
+          .from('tasks')
+          .insert(taskInserts)
+
+        if (tasksError) {
+          console.error('[v0] Error saving tasks:', tasksError)
+        }
+      } catch (err) {
+        console.error('[v0] Supabase error:', err)
+      }
+    }
+
+    // Add to local store
     projects.value.push(newProject)
-    console.log('[v0] Created project with ID:', projectId)
-    console.log('[v0] Projects in store:', projects.value.map(p => p.id))
     return projectId
   }
 

@@ -22,10 +22,7 @@ const milestoneFilter = ref<number | 'all'>('all')
 
 const project = computed(() => {
   const id = route.params.id as string
-  console.log('[v0] ProjectDetailView looking for id:', id)
-  const found = store.getProjectById(id)
-  console.log('[v0] Found project:', found?.id || 'NOT FOUND')
-  return found
+  return store.getProjectById(id)
 })
 
 const progress = computed(() => {

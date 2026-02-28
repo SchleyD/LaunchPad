@@ -16,8 +16,6 @@ const getProgressForProject = (projectId: string) => {
 }
 
 function handleProjectCreated(projectId: string) {
-  console.log('[v0] handleProjectCreated called with:', projectId)
-  console.log('[v0] Navigating to:', `/project/${projectId}`)
   router.push(`/project/${projectId}`)
 }
 </script>
