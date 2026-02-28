@@ -9,10 +9,16 @@ BEGIN
   END IF;
 END $$;
 
--- Change completed_by from UUID to TEXT if needed
+-- Change completed_by from UUID to TEXT if needed (drop FK constraint first)
 DO $$
 BEGIN
+  -- Drop foreign key constraint if it exists
+  IF EXISTS (SELECT 1 FROM information_schema.table_constraints WHERE constraint_name = 'punch_list_items_completed_by_fkey' AND table_name = 'punch_list_items') THEN
+    ALTER TABLE punch_list_items DROP CONSTRAINT punch_list_items_completed_by_fkey;
+  END IF;
+  
+  -- Change column type if it's UUID
   IF EXISTS (SELECT 1 FROM information_schema.columns WHERE table_name = 'punch_list_items' AND column_name = 'completed_by' AND data_type = 'uuid') THEN
-    ALTER TABLE punch_list_items ALTER COLUMN completed_by TYPE TEXT;
+    ALTER TABLE punch_list_items ALTER COLUMN completed_by TYPE TEXT USING completed_by::TEXT;
   END IF;
 END $$;
