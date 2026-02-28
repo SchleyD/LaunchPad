@@ -126,6 +126,7 @@ function handleSubmit() {
     quotedHours: quotedHoursPayload
   })
   
+  console.log('[v0] Modal received projectId:', projectId)
   emit('created', projectId)
   handleClose()
 }

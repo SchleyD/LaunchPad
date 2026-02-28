@@ -505,6 +505,8 @@ export const useProjectStore = defineStore('projects', () => {
     }
 
     projects.value.push(newProject)
+    console.log('[v0] Created project with ID:', projectId)
+    console.log('[v0] Projects in store:', projects.value.map(p => p.id))
     return projectId
   }
 
