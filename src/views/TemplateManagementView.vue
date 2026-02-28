@@ -1,11 +1,38 @@
 <script setup lang="ts">
-import { ref, computed } from 'vue'
+import { ref, computed, watch } from 'vue'
 import { useProjectStore } from '@/stores/projects'
 import type { TaskTemplate, ProjectType, TaskCategory, TaskPhase, SubtaskTemplate } from '@/types'
 import { TASK_PHASES } from '@/types'
 import { projectTypes, taskCategories, mockUsers, mockDepartments } from '@/data/mockData'
 
 const store = useProjectStore()
+
+// Historical stats for estimation suggestion
+const historicalStats = ref<{ 
+  avgActualHours: number | null, 
+  taskCount: number,
+  minHours: number | null,
+  maxHours: number | null 
+} | null>(null)
+
+// Watch for changes to title/category to update suggestions
+watch(
+  () => ({ title: formData.value.title, category: formData.value.category }),
+  ({ title, category }) => {
+    if (title && title.length >= 3) {
+      historicalStats.value = store.getTaskHistoricalStats(title, category)
+    } else {
+      historicalStats.value = null
+    }
+  },
+  { deep: true }
+)
+
+function useSuggestedHours() {
+  if (historicalStats.value?.avgActualHours) {
+    formData.value.estimatedHours = historicalStats.value.avgActualHours
+  }
+}
 
 // Editing state
 const editingTemplate = ref<TaskTemplate | null>(null)
@@ -337,6 +364,29 @@ function toggleProjectType(type: ProjectType) {
             step="0.5"
             class="w-full px-3 py-2 border border-slate-300 rounded-md text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
           />
+          <!-- Historical suggestion -->
+          <div 
+            v-if="historicalStats?.avgActualHours && historicalStats.taskCount > 0"
+            class="mt-2 p-2 bg-amber-50 border border-amber-200 rounded-md"
+          >
+            <div class="flex items-start justify-between gap-2">
+              <div class="text-xs text-amber-800">
+                <span class="font-medium">Suggestion:</span> 
+                Similar tasks averaged <span class="font-semibold">{{ historicalStats.avgActualHours }}h</span> actual
+                <span class="text-amber-600">
+                  ({{ historicalStats.taskCount }} completed task{{ historicalStats.taskCount !== 1 ? 's' : '' }}, 
+                  range: {{ historicalStats.minHours }}-{{ historicalStats.maxHours }}h)
+                </span>
+              </div>
+              <button
+                type="button"
+                @click="useSuggestedHours"
+                class="text-xs font-medium text-amber-700 hover:text-amber-900 whitespace-nowrap px-2 py-1 bg-amber-100 hover:bg-amber-200 rounded transition-colors"
+              >
+                Use {{ historicalStats.avgActualHours }}h
+              </button>
+            </div>
+          </div>
         </div>
 
         <!-- Assignee -->

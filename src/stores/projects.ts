@@ -21,6 +21,52 @@ export const useProjectStore = defineStore('projects', () => {
     projects.value.filter(p => p.status === 'Open')
   )
 
+  // Get historical stats for task estimation
+  function getTaskHistoricalStats(taskTitle: string, category?: string): { 
+    avgActualHours: number | null, 
+    taskCount: number,
+    minHours: number | null,
+    maxHours: number | null 
+  } {
+    // Find all completed tasks matching title or category
+    const completedTasks: Task[] = []
+    
+    projects.value.forEach(project => {
+      project.tasks.forEach(task => {
+        if (task.status !== 'Done') return
+        if (task.timeEntries.length === 0) return // No actual time logged
+        
+        // Match by title (fuzzy) or exact category
+        const titleMatch = task.title.toLowerCase().includes(taskTitle.toLowerCase()) ||
+                          taskTitle.toLowerCase().includes(task.title.toLowerCase())
+        const categoryMatch = category && task.category === category
+        
+        if (titleMatch || categoryMatch) {
+          completedTasks.push(task)
+        }
+      })
+    })
+
+    if (completedTasks.length === 0) {
+      return { avgActualHours: null, taskCount: 0, minHours: null, maxHours: null }
+    }
+
+    // Calculate actual hours for each task
+    const actualHours = completedTasks.map(task => 
+      task.timeEntries.reduce((sum, entry) => sum + entry.duration, 0)
+    )
+
+    const total = actualHours.reduce((sum, h) => sum + h, 0)
+    const avg = total / actualHours.length
+
+    return {
+      avgActualHours: Math.round(avg * 10) / 10, // Round to 1 decimal
+      taskCount: completedTasks.length,
+      minHours: Math.min(...actualHours),
+      maxHours: Math.max(...actualHours)
+    }
+  }
+
   const closedProjects = computed(() => 
     projects.value.filter(p => p.status === 'Closed')
   )
@@ -498,5 +544,8 @@ export const useProjectStore = defineStore('projects', () => {
     updateTaskTemplate,
     deleteTaskTemplate,
     createProjectFromTemplate,
+    
+    // Estimation helpers
+    getTaskHistoricalStats,
   }
 })
