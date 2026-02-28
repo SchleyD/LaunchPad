@@ -543,7 +543,7 @@ async function toggleActionItemStatus(item: ActionItem) {
 }
 
 async function deleteActionItem(item: ActionItem) {
-  if (!confirm('Delete this action item?')) return
+  if (!confirm('Delete this customer action item?')) return
   if (!isSupabaseConfigured || !supabase) return
   
   try {
@@ -781,13 +781,10 @@ function getContactTypeLabel(type: string): string {
         </div>
       </div>
 
-      <!-- Action Items Section -->
+      <!-- Customer Action Items Section -->
       <div class="card">
         <div class="px-4 py-3 border-b border-surface-200 flex items-center justify-between">
-          <div class="flex items-center gap-2">
-            <h3 class="font-semibold text-surface-900">Action Items</h3>
-            <span class="text-xs text-surface-500">(Waiting on Customer)</span>
-          </div>
+          <h3 class="font-semibold text-surface-900">Customer Action Items</h3>
           <button 
             @click="openAddActionItem"
             class="text-sm text-primary-600 hover:text-primary-700 font-medium flex items-center gap-1"
@@ -800,7 +797,7 @@ function getContactTypeLabel(type: string): string {
         </div>
 
         <div v-if="actionItems.length === 0" class="px-4 py-8 text-center text-surface-500">
-          <p>No action items. Add items you're waiting on the customer to complete.</p>
+          <p>No customer action items. Track things the customer needs to do or provide.</p>
         </div>
 
         <div v-else class="divide-y divide-surface-100">
@@ -1093,7 +1090,7 @@ function getContactTypeLabel(type: string): string {
       <div class="bg-white rounded-xl w-full max-w-lg mx-4 shadow-xl">
         <div class="px-6 py-4 border-b border-surface-200">
           <h3 class="text-lg font-semibold text-surface-900">
-            {{ editingActionItem ? 'Edit Action Item' : 'Add Action Item' }}
+            {{ editingActionItem ? 'Edit Customer Action Item' : 'Add Customer Action Item' }}
           </h3>
         </div>
         
