@@ -21,6 +21,39 @@ export type TaskCategory =
   | 'Documentation'
   | 'Punch List'
 
+// Task phases based on project workflow (from ClickUp structure)
+export type TaskPhase = 
+  | 'Special Proj. Notes'
+  | 'Inhouse Planning'
+  | 'Inhouse-HW/SW'
+  | 'Inhouse Documentation'
+  | 'Site-HW'
+  | 'Site-SW'
+  | 'Shipping/Install'
+  | 'Go Live-Follow Up'
+
+export const TASK_PHASES: TaskPhase[] = [
+  'Special Proj. Notes',
+  'Inhouse Planning',
+  'Inhouse-HW/SW',
+  'Inhouse Documentation',
+  'Site-HW',
+  'Site-SW',
+  'Shipping/Install',
+  'Go Live-Follow Up'
+]
+
+export const PHASE_COLORS: Record<TaskPhase, string> = {
+  'Special Proj. Notes': 'bg-red-500',
+  'Inhouse Planning': 'bg-cyan-600',
+  'Inhouse-HW/SW': 'bg-cyan-700',
+  'Inhouse Documentation': 'bg-cyan-600',
+  'Site-HW': 'bg-teal-600',
+  'Site-SW': 'bg-teal-600',
+  'Shipping/Install': 'bg-amber-500',
+  'Go Live-Follow Up': 'bg-green-500'
+}
+
 export interface TimeEntry {
   id: string
   duration: number // hours
@@ -44,6 +77,7 @@ export interface Task {
   owner: string
   departmentId?: string // Optional department assignment
   status: TaskStatus
+  phase?: TaskPhase // Project phase this task belongs to
   milestone: number // 20, 40, 60, 80, 90, 100
   category: TaskCategory
   estimatedHours: number
