@@ -15,6 +15,103 @@ export const useProjectStore = defineStore('projects', () => {
   const projects = ref<Project[]>(mockProjects)
   const taskTemplates = ref<TaskTemplate[]>(mockTaskTemplates)
   const lastReviewDate = ref<Date>(new Date(Date.now() - 7 * 24 * 60 * 60 * 1000)) // 7 days ago
+  const isLoading = ref(false)
+  const hasLoadedFromDb = ref(false)
+
+  // Load projects from Supabase
+  async function loadProjects() {
+    if (!supabase || hasLoadedFromDb.value) return
+    
+    isLoading.value = true
+    try {
+      // Load projects
+      const { data: projectRows, error: projectError } = await supabase
+        .from('projects')
+        .select('*')
+        .order('created_at', { ascending: false })
+
+      if (projectError) {
+        console.error('[v0] Error loading projects:', projectError)
+        return
+      }
+
+      if (!projectRows || projectRows.length === 0) {
+        hasLoadedFromDb.value = true
+        return
+      }
+
+      // Load tasks for all projects
+      const projectIds = projectRows.map(p => p.id)
+      const { data: taskRows, error: taskError } = await supabase
+        .from('tasks')
+        .select('*')
+        .in('project_id', projectIds)
+
+      if (taskError) {
+        console.error('[v0] Error loading tasks:', taskError)
+      }
+
+      // Convert database rows to Project objects
+      const dbProjects: Project[] = projectRows.map(row => {
+        const projectTasks = (taskRows || [])
+          .filter(t => t.project_id === row.id)
+          .map(t => ({
+            id: t.id,
+            projectId: t.project_id,
+            parentTaskId: t.parent_task_id || undefined,
+            title: t.title,
+            owner: t.owner || 'TBD',
+            status: t.status as TaskStatus,
+            phase: t.phase || undefined,
+            milestone: t.milestone,
+            category: t.category,
+            estimatedHours: t.estimated_hours,
+            timeEntries: [],
+            comments: [],
+            createdAt: new Date(t.created_at),
+            updatedAt: new Date(t.updated_at)
+          }))
+
+        return {
+          id: row.id,
+          name: row.name,
+          customer: row.customer,
+          workOrderId: row.work_order_id,
+          orderDate: new Date(row.order_date),
+          leadTimeType: row.lead_time_type || 'Standard',
+          reseller: row.reseller || undefined,
+          scaleDealer: row.scale_dealer || undefined,
+          owner: row.owner || 'TBD',
+          contributors: [],
+          status: row.status,
+          blocked: row.blocked || false,
+          type: row.project_type === 'SoftwareOnly' ? 'SoftwareOnly' : 'Hardware',
+          quotedHours: row.quoted_hours || {},
+          tasks: projectTasks,
+          reviewNotes: [],
+          createdAt: new Date(row.created_at),
+          updatedAt: new Date(row.updated_at)
+        }
+      })
+
+      // Merge with mock data (keep mock data for demo, add db projects)
+      const existingIds = new Set(projects.value.map(p => p.id))
+      dbProjects.forEach(p => {
+        if (!existingIds.has(p.id)) {
+          projects.value.push(p)
+        }
+      })
+
+      hasLoadedFromDb.value = true
+    } catch (err) {
+      console.error('[v0] Error in loadProjects:', err)
+    } finally {
+      isLoading.value = false
+    }
+  }
+
+  // Auto-load on store creation
+  loadProjects()
 
   // Getters
   const activeProjects = computed(() => 
@@ -523,6 +620,7 @@ export const useProjectStore = defineStore('projects', () => {
             work_order_id: payload.workOrderId,
             order_date: payload.orderDate.toISOString().split('T')[0],
             project_type: payload.projectType,
+            owner: payload.owner.toUpperCase(),
             reseller: payload.reseller || null,
             scale_dealer: payload.scaleDealer || null,
             status: 'Open',
@@ -540,6 +638,7 @@ export const useProjectStore = defineStore('projects', () => {
           project_id: projectId,
           parent_task_id: task.parentTaskId || null,
           title: task.title,
+          owner: task.owner,
           status: task.status,
           phase: task.phase || null,
           milestone: task.milestone,
@@ -569,6 +668,10 @@ export const useProjectStore = defineStore('projects', () => {
     projects,
     taskTemplates,
     lastReviewDate,
+    isLoading,
+    
+    // Data loading
+    loadProjects,
     
     // Getters
     activeProjects,
