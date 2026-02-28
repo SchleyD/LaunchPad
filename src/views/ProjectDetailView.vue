@@ -7,12 +7,13 @@ import ProgressBar from '@/components/ProgressBar.vue'
 import TaskList from '@/components/TaskList.vue'
 import TaskDrawer from '@/components/TaskDrawer.vue'
 import ProjectTimeTab from '@/components/ProjectTimeTab.vue'
+import ProjectInfoTab from '@/components/ProjectInfoTab.vue'
 
 const route = useRoute()
 const router = useRouter()
 const store = useProjectStore()
 
-const activeTab = ref<'tasks' | 'time' | 'emails'>('tasks')
+const activeTab = ref<'tasks' | 'info' | 'time' | 'emails'>('tasks')
 const selectedTaskId = ref<string | null>(null)
 const statusFilter = ref<TaskStatus | 'all'>('all')
 const milestoneFilter = ref<number | 'all'>('all')
@@ -170,6 +171,17 @@ watch(() => route.params.id, () => {
           Tasks
         </button>
         <button
+          @click="activeTab = 'info'"
+          :class="[
+            'pb-3 text-sm font-medium border-b-2 transition-colors',
+            activeTab === 'info' 
+              ? 'border-primary-500 text-primary-600' 
+              : 'border-transparent text-surface-500 hover:text-surface-700'
+          ]"
+        >
+          Project Info
+        </button>
+        <button
           @click="activeTab = 'time'"
           :class="[
             'pb-3 text-sm font-medium border-b-2 transition-colors',
@@ -225,6 +237,10 @@ watch(() => route.params.id, () => {
         :tasks="filteredTasks" 
         @select-task="openTaskDrawer"
       />
+    </div>
+
+    <div v-else-if="activeTab === 'info'">
+      <ProjectInfoTab :project="project" />
     </div>
 
     <div v-else-if="activeTab === 'time'">

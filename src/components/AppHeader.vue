@@ -3,6 +3,14 @@ import { ref } from 'vue'
 import { useRouter } from 'vue-router'
 import { useAuthStore } from '@/stores/auth'
 
+defineProps<{
+  isSidebarOpen?: boolean
+}>()
+
+const emit = defineEmits<{
+  (e: 'toggle-sidebar'): void
+}>()
+
 const router = useRouter()
 const authStore = useAuthStore()
 
@@ -21,6 +29,17 @@ function switchUser() {
 
 <template>
   <header class="h-14 bg-white border-b border-surface-200 flex items-center px-4 shrink-0">
+    <!-- Mobile menu button -->
+    <button 
+      @click="emit('toggle-sidebar')"
+      class="lg:hidden mr-3 p-2 -ml-2 rounded-lg hover:bg-surface-100 transition-colors"
+      aria-label="Toggle menu"
+    >
+      <svg class="w-5 h-5 text-surface-600" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 6h16M4 12h16M4 18h16" />
+      </svg>
+    </button>
+    
     <div class="flex items-center gap-3">
       <div class="w-8 h-8 bg-primary-500 rounded-lg flex items-center justify-center">
         <svg class="w-5 h-5 text-white" viewBox="0 0 24 24" fill="currentColor">

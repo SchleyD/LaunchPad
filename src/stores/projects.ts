@@ -3,6 +3,12 @@ import { ref, computed } from 'vue'
 import type { Project, Task, TaskStatus, TimeEntry, TimeCategory, ReviewNote, ProjectChangeSummary, TaskTemplate, ProjectType, ProjectCreatePayload } from '@/types'
 import { mockProjects, mockTaskTemplates } from '@/data/mockData'
 import { useAuthStore } from './auth'
+import { createClient } from '@supabase/supabase-js'
+
+// Initialize Supabase client if configured
+const supabaseUrl = import.meta.env.VITE_SUPABASE_URL
+const supabaseAnonKey = import.meta.env.VITE_SUPABASE_ANON_KEY
+const supabase = supabaseUrl && supabaseAnonKey ? createClient(supabaseUrl, supabaseAnonKey) : null
 
 export const useProjectStore = defineStore('projects', () => {
   // State
@@ -197,6 +203,42 @@ export const useProjectStore = defineStore('projects', () => {
     note.isReviewed = true
     note.reviewedAt = new Date()
     note.reviewedBy = authStore.currentUser?.initials || 'Unknown'
+  }
+
+  async function convertNoteToActionItem(projectId: string, noteId: string) {
+    if (!supabase) {
+      console.error('[v0] Supabase not configured')
+      return false
+    }
+
+    const authStore = useAuthStore()
+    const project = projects.value.find(p => p.id === projectId)
+    if (!project) return false
+
+    const note = project.reviewNotes.find(n => n.id === noteId)
+    if (!note) return false
+
+    try {
+      // Create action item in Supabase
+      const { error } = await supabase.from('action_items').insert({
+        project_id: projectId,
+        description: note.text,
+        status: 'Open',
+        created_by: authStore.currentUser?.id || null
+      })
+
+      if (error) throw error
+
+      // Mark note as reviewed
+      note.isReviewed = true
+      note.reviewedAt = new Date()
+      note.reviewedBy = authStore.currentUser?.initials || 'Unknown'
+
+      return true
+    } catch (error) {
+      console.error('[v0] Failed to create action item:', error)
+      return false
+    }
   }
 
   function addTask(projectId: string, task: Omit<Task, 'id' | 'projectId' | 'timeEntries' | 'comments' | 'createdAt' | 'updatedAt'>) {
@@ -406,6 +448,7 @@ export const useProjectStore = defineStore('projects', () => {
     addReviewNote,
     markNoteAsReviewed,
     convertNoteToTask,
+    convertNoteToActionItem,
     addTask,
     setLastReviewDate,
     getProjectChangeSummary,

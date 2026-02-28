@@ -19,6 +19,10 @@ function convertToTask() {
   store.convertNoteToTask(props.projectId, props.note.id)
 }
 
+async function convertToActionItem() {
+  await store.convertNoteToActionItem(props.projectId, props.note.id)
+}
+
 function formatDate(date: Date): string {
   return format(new Date(date), 'MMM d, h:mm a')
 }
@@ -47,16 +51,26 @@ function formatDate(date: Date): string {
         </div>
       </div>
       
-      <div v-if="!note.isReviewed" class="flex items-center gap-2 shrink-0">
+      <div v-if="!note.isReviewed" class="flex items-center gap-1 shrink-0">
         <button 
           @click="convertToTask"
           class="btn-ghost text-xs px-2 py-1"
-          title="Convert to Task"
+          title="Create Task for our team"
         >
           <svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
             <path stroke-linecap="round" stroke-linejoin="round" d="M12 4.5v15m7.5-7.5h-15" />
           </svg>
           Task
+        </button>
+        <button 
+          @click="convertToActionItem"
+          class="btn-ghost text-xs px-2 py-1 text-amber-600 hover:bg-amber-50"
+          title="Create Customer Action Item"
+        >
+          <svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+            <path stroke-linecap="round" stroke-linejoin="round" d="M15.75 6a3.75 3.75 0 11-7.5 0 3.75 3.75 0 017.5 0zM4.501 20.118a7.5 7.5 0 0114.998 0A17.933 17.933 0 0112 21.75c-2.676 0-5.216-.584-7.499-1.632z" />
+          </svg>
+          Customer
         </button>
         <button 
           @click="markAsReviewed"
