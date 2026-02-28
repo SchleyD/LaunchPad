@@ -73,6 +73,7 @@ export interface Comment {
 export interface Task {
   id: string
   projectId: string
+  parentTaskId?: string // If set, this is a subtask
   title: string
   owner: string
   departmentId?: string // Optional department assignment
@@ -83,6 +84,7 @@ export interface Task {
   estimatedHours: number
   timeEntries: TimeEntry[]
   comments: Comment[]
+  subtasks?: Task[] // Populated client-side for nested display
   createdAt: Date
   updatedAt: Date
 }
