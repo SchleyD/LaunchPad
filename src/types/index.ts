@@ -164,15 +164,25 @@ export type TemplateAssignee = '[ProjectOwner]' | string
 // Department assignment can be a department ID or '[ProjectOwner]' for dynamic assignment
 export type TemplateDepartment = string | null
 
+export interface SubtaskTemplate {
+  id: string
+  title: string
+  estimatedHours: number
+  assignee: TemplateAssignee
+  order: number
+}
+
 export interface TaskTemplate {
   id: string
   title: string
   projectTypes: ProjectType[] // Which project types this task applies to
+  phase?: TaskPhase // Project phase this task belongs to
   milestone: number // 20, 40, 60, 80, 90, 100
   category: TaskCategory
   estimatedHours: number
   assignee: TemplateAssignee // '[ProjectOwner]' or specific user ID like 'rb'
   departmentId?: TemplateDepartment // Optional department assignment for template
+  subtasks?: SubtaskTemplate[] // Subtask templates
   order: number // For sorting within milestone
   createdAt: Date
   updatedAt: Date

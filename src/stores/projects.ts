@@ -370,19 +370,27 @@ export const useProjectStore = defineStore('projects', () => {
     // Get templates for this project type
     const templates = getTemplatesForProjectType(payload.projectType)
     
-    // Create tasks from templates
-    const tasks: Task[] = templates.map((template, index) => {
+    // Create tasks from templates (including subtasks)
+    const tasks: Task[] = []
+    let taskIndex = 0
+    
+    templates.forEach((template) => {
       // Determine assignee: '[ProjectOwner]' maps to project owner, otherwise use specific assignee
       const assignee = template.assignee === '[ProjectOwner]' 
         ? payload.owner.toUpperCase() 
         : template.assignee.toUpperCase()
 
-      return {
-        id: `t-${Date.now()}-${index}`,
+      const parentTaskId = `t-${Date.now()}-${taskIndex}`
+      taskIndex++
+
+      // Create parent task
+      const parentTask: Task = {
+        id: parentTaskId,
         projectId,
         title: template.title,
         owner: assignee,
         status: 'Backlog' as TaskStatus,
+        phase: template.phase,
         milestone: template.milestone,
         category: template.category,
         estimatedHours: template.estimatedHours,
@@ -390,6 +398,35 @@ export const useProjectStore = defineStore('projects', () => {
         comments: [],
         createdAt: new Date(),
         updatedAt: new Date()
+      }
+      tasks.push(parentTask)
+
+      // Create subtasks if template has them
+      if (template.subtasks?.length) {
+        template.subtasks.forEach((subtaskTemplate) => {
+          const subtaskAssignee = subtaskTemplate.assignee === '[ProjectOwner]' 
+            ? payload.owner.toUpperCase() 
+            : subtaskTemplate.assignee.toUpperCase()
+
+          const subtask: Task = {
+            id: `t-${Date.now()}-${taskIndex}`,
+            projectId,
+            parentTaskId,
+            title: subtaskTemplate.title,
+            owner: subtaskAssignee,
+            status: 'Backlog' as TaskStatus,
+            phase: template.phase, // Inherit phase from parent
+            milestone: template.milestone, // Inherit milestone from parent
+            category: template.category, // Inherit category from parent
+            estimatedHours: subtaskTemplate.estimatedHours,
+            timeEntries: [],
+            comments: [],
+            createdAt: new Date(),
+            updatedAt: new Date()
+          }
+          tasks.push(subtask)
+          taskIndex++
+        })
       }
     })
 
