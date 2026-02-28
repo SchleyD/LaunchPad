@@ -3,6 +3,14 @@ import { computed } from 'vue'
 import { useRoute } from 'vue-router'
 import { useAuthStore } from '@/stores/auth'
 
+defineProps<{
+  isOpen?: boolean
+}>()
+
+const emit = defineEmits<{
+  (e: 'close'): void
+}>()
+
 const route = useRoute()
 const authStore = useAuthStore()
 
@@ -33,8 +41,30 @@ const isActive = (path: string) => {
 </script>
 
 <template>
-  <aside class="w-56 bg-white border-r border-surface-200 shrink-0">
-    <nav class="p-3 space-y-1">
+  <!-- Desktop: always visible, Mobile: slide-in drawer -->
+  <aside 
+    :class="[
+      'w-56 bg-white border-r border-surface-200 shrink-0 flex flex-col',
+      'fixed lg:relative inset-y-0 left-0 z-50',
+      'transform transition-transform duration-200 ease-in-out',
+      'lg:transform-none lg:translate-x-0',
+      isOpen ? 'translate-x-0' : '-translate-x-full'
+    ]"
+  >
+    <!-- Mobile close button -->
+    <div class="lg:hidden flex items-center justify-between p-3 border-b border-surface-200">
+      <span class="font-semibold text-surface-900">Menu</span>
+      <button 
+        @click="emit('close')"
+        class="p-2 rounded-lg hover:bg-surface-100 transition-colors"
+        aria-label="Close menu"
+      >
+        <svg class="w-5 h-5 text-surface-600" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12" />
+        </svg>
+      </button>
+    </div>
+    <nav class="p-3 space-y-1 flex-1">
       <router-link
         v-for="item in navItems"
         :key="item.path"
@@ -62,7 +92,7 @@ const isActive = (path: string) => {
       </router-link>
     </nav>
     
-    <div class="absolute bottom-0 left-0 w-56 p-4 border-t border-surface-200">
+    <div class="p-4 border-t border-surface-200 mt-auto">
       <div class="text-xs text-surface-400">
         AWS Internal Tool
       </div>
