@@ -43,6 +43,28 @@ interface Contact {
   notes: string
 }
 
+interface ActionItem {
+  id: string
+  projectId: string
+  description: string
+  assignedTo: string
+  status: 'Open' | 'Waiting' | 'Closed'
+  dueDate: string | null
+  createdAt: string
+  closedAt: string | null
+  notes: string
+}
+
+interface PunchListItem {
+  id: string
+  projectId: string
+  description: string
+  isCompleted: boolean
+  completedAt: string | null
+  completedBy: string | null
+  notes: string
+}
+
 const props = defineProps<{
   project: Project
 }>()
@@ -52,14 +74,20 @@ const isLoading = ref(false)
 const sites = ref<Site[]>([])
 const devices = ref<NetworkDevice[]>([])
 const contacts = ref<Contact[]>([])
+const actionItems = ref<ActionItem[]>([])
+const punchListItems = ref<PunchListItem[]>([])
 
 // Modal state
 const showSiteModal = ref(false)
 const showDeviceModal = ref(false)
 const showContactModal = ref(false)
+const showActionItemModal = ref(false)
+const showPunchListModal = ref(false)
 const editingSite = ref<Site | null>(null)
 const editingDevice = ref<NetworkDevice | null>(null)
 const editingContact = ref<Contact | null>(null)
+const editingActionItem = ref<ActionItem | null>(null)
+const editingPunchListItem = ref<PunchListItem | null>(null)
 const selectedSiteId = ref<string | null>(null)
 
 // Form data
@@ -98,6 +126,19 @@ const contactForm = ref({
   notes: ''
 })
 
+const actionItemForm = ref({
+  description: '',
+  assignedTo: '',
+  status: 'Open' as ActionItem['status'],
+  dueDate: '',
+  notes: ''
+})
+
+const punchListForm = ref({
+  description: '',
+  notes: ''
+})
+
 // Computed
 const devicesBySite = computed(() => {
   const grouped: Record<string, NetworkDevice[]> = {}
@@ -109,6 +150,22 @@ const devicesBySite = computed(() => {
 
 const shippingSite = computed(() => {
   return sites.value.find(s => s.isShippingAddress)
+})
+
+const openActionItems = computed(() => {
+  return actionItems.value.filter(a => a.status !== 'Closed')
+})
+
+const closedActionItems = computed(() => {
+  return actionItems.value.filter(a => a.status === 'Closed')
+})
+
+const incompletePunchListItems = computed(() => {
+  return punchListItems.value.filter(p => !p.isCompleted)
+})
+
+const completedPunchListItems = computed(() => {
+  return punchListItems.value.filter(p => p.isCompleted)
 })
 
 // Load data
@@ -179,6 +236,42 @@ async function loadData() {
       email: c.email || '',
       phone: c.phone || '',
       notes: c.notes || ''
+    }))
+
+    // Load action items
+    const { data: actionItemsData } = await supabase
+      .from('action_items')
+      .select('*')
+      .eq('project_id', props.project.id)
+      .order('created_at', { ascending: false })
+    
+    actionItems.value = (actionItemsData || []).map(a => ({
+      id: a.id,
+      projectId: a.project_id,
+      description: a.description,
+      assignedTo: a.assigned_to || '',
+      status: a.status,
+      dueDate: a.due_date,
+      createdAt: a.created_at,
+      closedAt: a.closed_at,
+      notes: a.notes || ''
+    }))
+
+    // Load punch list items
+    const { data: punchListData } = await supabase
+      .from('punch_list_items')
+      .select('*')
+      .eq('project_id', props.project.id)
+      .order('created_at', { ascending: true })
+    
+    punchListItems.value = (punchListData || []).map(p => ({
+      id: p.id,
+      projectId: p.project_id,
+      description: p.description,
+      isCompleted: p.is_completed || false,
+      completedAt: p.completed_at,
+      completedBy: p.completed_by,
+      notes: p.notes || ''
     }))
   } catch (error) {
     console.error('[v0] Failed to load project info:', error)
@@ -416,6 +509,190 @@ function getDeviceTypeIcon(type: string): string {
   }
 }
 
+// Action Item CRUD
+function openAddActionItem() {
+  editingActionItem.value = null
+  actionItemForm.value = {
+    description: '',
+    assignedTo: '',
+    status: 'Open',
+    dueDate: '',
+    notes: ''
+  }
+  showActionItemModal.value = true
+}
+
+function openEditActionItem(item: ActionItem) {
+  editingActionItem.value = item
+  actionItemForm.value = {
+    description: item.description,
+    assignedTo: item.assignedTo,
+    status: item.status,
+    dueDate: item.dueDate || '',
+    notes: item.notes
+  }
+  showActionItemModal.value = true
+}
+
+async function saveActionItem() {
+  if (!isSupabaseConfigured || !supabase) return
+  
+  try {
+    const itemData = {
+      project_id: props.project.id,
+      description: actionItemForm.value.description,
+      assigned_to: actionItemForm.value.assignedTo || null,
+      status: actionItemForm.value.status,
+      due_date: actionItemForm.value.dueDate || null,
+      notes: actionItemForm.value.notes || null,
+      closed_at: actionItemForm.value.status === 'Closed' ? new Date().toISOString() : null
+    }
+
+    if (editingActionItem.value) {
+      await supabase
+        .from('action_items')
+        .update(itemData)
+        .eq('id', editingActionItem.value.id)
+    } else {
+      await supabase
+        .from('action_items')
+        .insert(itemData)
+    }
+    
+    await loadData()
+    showActionItemModal.value = false
+  } catch (error) {
+    console.error('[v0] Failed to save action item:', error)
+  }
+}
+
+async function toggleActionItemStatus(item: ActionItem) {
+  if (!isSupabaseConfigured || !supabase) return
+  
+  try {
+    const newStatus = item.status === 'Closed' ? 'Open' : 'Closed'
+    await supabase
+      .from('action_items')
+      .update({ 
+        status: newStatus,
+        closed_at: newStatus === 'Closed' ? new Date().toISOString() : null
+      })
+      .eq('id', item.id)
+    
+    await loadData()
+  } catch (error) {
+    console.error('[v0] Failed to toggle action item:', error)
+  }
+}
+
+async function deleteActionItem(item: ActionItem) {
+  if (!confirm('Delete this action item?')) return
+  if (!isSupabaseConfigured || !supabase) return
+  
+  try {
+    await supabase.from('action_items').delete().eq('id', item.id)
+    await loadData()
+  } catch (error) {
+    console.error('[v0] Failed to delete action item:', error)
+  }
+}
+
+// Punch List CRUD
+function openAddPunchListItem() {
+  editingPunchListItem.value = null
+  punchListForm.value = {
+    description: '',
+    notes: ''
+  }
+  showPunchListModal.value = true
+}
+
+function openEditPunchListItem(item: PunchListItem) {
+  editingPunchListItem.value = item
+  punchListForm.value = {
+    description: item.description,
+    notes: item.notes
+  }
+  showPunchListModal.value = true
+}
+
+async function savePunchListItem() {
+  if (!isSupabaseConfigured || !supabase) return
+  
+  try {
+    const itemData = {
+      project_id: props.project.id,
+      description: punchListForm.value.description,
+      notes: punchListForm.value.notes || null
+    }
+
+    if (editingPunchListItem.value) {
+      await supabase
+        .from('punch_list_items')
+        .update(itemData)
+        .eq('id', editingPunchListItem.value.id)
+    } else {
+      await supabase
+        .from('punch_list_items')
+        .insert(itemData)
+    }
+    
+    await loadData()
+    showPunchListModal.value = false
+  } catch (error) {
+    console.error('[v0] Failed to save punch list item:', error)
+  }
+}
+
+async function togglePunchListItem(item: PunchListItem) {
+  if (!isSupabaseConfigured || !supabase) return
+  
+  try {
+    const newCompleted = !item.isCompleted
+    await supabase
+      .from('punch_list_items')
+      .update({ 
+        is_completed: newCompleted,
+        completed_at: newCompleted ? new Date().toISOString() : null
+      })
+      .eq('id', item.id)
+    
+    await loadData()
+  } catch (error) {
+    console.error('[v0] Failed to toggle punch list item:', error)
+  }
+}
+
+async function deletePunchListItem(item: PunchListItem) {
+  if (!confirm('Delete this punch list item?')) return
+  if (!isSupabaseConfigured || !supabase) return
+  
+  try {
+    await supabase.from('punch_list_items').delete().eq('id', item.id)
+    await loadData()
+  } catch (error) {
+    console.error('[v0] Failed to delete punch list item:', error)
+  }
+}
+
+function formatDate(dateString: string): string {
+  if (!dateString) return ''
+  return new Date(dateString).toLocaleDateString('en-US', {
+    month: 'short',
+    day: 'numeric',
+    year: 'numeric'
+  })
+}
+
+function getStatusColor(status: string): string {
+  switch (status) {
+    case 'Open': return 'bg-amber-100 text-amber-800'
+    case 'Waiting': return 'bg-blue-100 text-blue-800'
+    case 'Closed': return 'bg-green-100 text-green-800'
+    default: return 'bg-surface-100 text-surface-600'
+  }
+}
+
 function getContactTypeLabel(type: string): string {
   switch (type) {
     case 'Main': return 'Main Contact'
@@ -620,6 +897,173 @@ function getContactTypeLabel(type: string): string {
                   <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
                 </svg>
               </button>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Action Items Section -->
+      <div class="card">
+        <div class="px-4 py-3 border-b border-surface-200 flex items-center justify-between">
+          <div class="flex items-center gap-2">
+            <h3 class="font-semibold text-surface-900">Action Items</h3>
+            <span class="text-xs text-surface-500">(Waiting on Customer)</span>
+          </div>
+          <button 
+            @click="openAddActionItem"
+            class="text-sm text-primary-600 hover:text-primary-700 font-medium flex items-center gap-1"
+          >
+            <svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4" />
+            </svg>
+            Add Item
+          </button>
+        </div>
+
+        <div v-if="actionItems.length === 0" class="px-4 py-8 text-center text-surface-500">
+          <p>No action items. Add items you're waiting on the customer to complete.</p>
+        </div>
+
+        <div v-else class="divide-y divide-surface-100">
+          <!-- Open/Waiting Items -->
+          <div v-for="item in openActionItems" :key="item.id" class="px-4 py-3">
+            <div class="flex items-start gap-3">
+              <button 
+                @click="toggleActionItemStatus(item)"
+                class="mt-0.5 w-5 h-5 rounded border-2 border-surface-300 hover:border-primary-500 flex items-center justify-center shrink-0 transition-colors"
+              >
+              </button>
+              <div class="flex-1 min-w-0">
+                <div class="flex items-center gap-2 flex-wrap">
+                  <span class="font-medium text-surface-900">{{ item.description }}</span>
+                  <span :class="['badge text-xs', getStatusColor(item.status)]">{{ item.status }}</span>
+                </div>
+                <div class="flex items-center gap-3 text-xs text-surface-500 mt-1">
+                  <span v-if="item.assignedTo">Waiting on: {{ item.assignedTo }}</span>
+                  <span v-if="item.dueDate">Due: {{ formatDate(item.dueDate) }}</span>
+                  <span>Created: {{ formatDate(item.createdAt) }}</span>
+                </div>
+                <p v-if="item.notes" class="text-sm text-surface-600 mt-1">{{ item.notes }}</p>
+              </div>
+              <div class="flex items-center gap-1 shrink-0">
+                <button 
+                  @click="openEditActionItem(item)"
+                  class="p-1.5 text-surface-400 hover:text-surface-600 hover:bg-surface-100 rounded"
+                >
+                  <svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15.232 5.232l3.536 3.536m-2.036-5.036a2.5 2.5 0 113.536 3.536L6.5 21.036H3v-3.572L16.732 3.732z" />
+                  </svg>
+                </button>
+                <button 
+                  @click="deleteActionItem(item)"
+                  class="p-1.5 text-surface-400 hover:text-red-600 hover:bg-red-50 rounded"
+                >
+                  <svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12" />
+                  </svg>
+                </button>
+              </div>
+            </div>
+          </div>
+
+          <!-- Closed Items (collapsed) -->
+          <div v-if="closedActionItems.length > 0" class="px-4 py-3 bg-surface-50">
+            <details>
+              <summary class="text-sm font-medium text-surface-500 cursor-pointer hover:text-surface-700">
+                {{ closedActionItems.length }} completed item{{ closedActionItems.length === 1 ? '' : 's' }}
+              </summary>
+              <div class="mt-2 space-y-2">
+                <div v-for="item in closedActionItems" :key="item.id" class="flex items-center gap-3 opacity-60">
+                  <button 
+                    @click="toggleActionItemStatus(item)"
+                    class="w-5 h-5 rounded border-2 border-green-500 bg-green-500 flex items-center justify-center shrink-0"
+                  >
+                    <svg class="w-3 h-3 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                      <path stroke-linecap="round" stroke-linejoin="round" stroke-width="3" d="M5 13l4 4L19 7" />
+                    </svg>
+                  </button>
+                  <span class="text-sm text-surface-600 line-through">{{ item.description }}</span>
+                  <span class="text-xs text-surface-400">{{ formatDate(item.closedAt || '') }}</span>
+                </div>
+              </div>
+            </details>
+          </div>
+        </div>
+      </div>
+
+      <!-- Punch List Section -->
+      <div class="card">
+        <div class="px-4 py-3 border-b border-surface-200 flex items-center justify-between">
+          <div class="flex items-center gap-2">
+            <h3 class="font-semibold text-surface-900">Punch List</h3>
+            <span class="text-xs text-surface-500">(Final Verification)</span>
+          </div>
+          <button 
+            @click="openAddPunchListItem"
+            class="text-sm text-primary-600 hover:text-primary-700 font-medium flex items-center gap-1"
+          >
+            <svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4" />
+            </svg>
+            Add Item
+          </button>
+        </div>
+
+        <div v-if="punchListItems.length === 0" class="px-4 py-8 text-center text-surface-500">
+          <p>No punch list items. Add items to verify before closing the project.</p>
+        </div>
+
+        <div v-else class="divide-y divide-surface-100">
+          <!-- Incomplete Items -->
+          <div v-for="item in incompletePunchListItems" :key="item.id" class="px-4 py-3">
+            <div class="flex items-start gap-3">
+              <button 
+                @click="togglePunchListItem(item)"
+                class="mt-0.5 w-5 h-5 rounded border-2 border-surface-300 hover:border-green-500 flex items-center justify-center shrink-0 transition-colors"
+              >
+              </button>
+              <div class="flex-1 min-w-0">
+                <span class="font-medium text-surface-900">{{ item.description }}</span>
+                <p v-if="item.notes" class="text-sm text-surface-600 mt-1">{{ item.notes }}</p>
+              </div>
+              <div class="flex items-center gap-1 shrink-0">
+                <button 
+                  @click="openEditPunchListItem(item)"
+                  class="p-1.5 text-surface-400 hover:text-surface-600 hover:bg-surface-100 rounded"
+                >
+                  <svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15.232 5.232l3.536 3.536m-2.036-5.036a2.5 2.5 0 113.536 3.536L6.5 21.036H3v-3.572L16.732 3.732z" />
+                  </svg>
+                </button>
+                <button 
+                  @click="deletePunchListItem(item)"
+                  class="p-1.5 text-surface-400 hover:text-red-600 hover:bg-red-50 rounded"
+                >
+                  <svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12" />
+                  </svg>
+                </button>
+              </div>
+            </div>
+          </div>
+
+          <!-- Completed Items -->
+          <div v-for="item in completedPunchListItems" :key="item.id" class="px-4 py-3 bg-surface-50">
+            <div class="flex items-start gap-3 opacity-60">
+              <button 
+                @click="togglePunchListItem(item)"
+                class="mt-0.5 w-5 h-5 rounded border-2 border-green-500 bg-green-500 flex items-center justify-center shrink-0"
+              >
+                <svg class="w-3 h-3 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="3" d="M5 13l4 4L19 7" />
+                </svg>
+              </button>
+              <div class="flex-1 min-w-0">
+                <span class="font-medium text-surface-600 line-through">{{ item.description }}</span>
+                <p v-if="item.completedAt" class="text-xs text-surface-400 mt-0.5">
+                  Completed: {{ formatDate(item.completedAt) }}
+                </p>
+              </div>
             </div>
           </div>
         </div>
@@ -838,6 +1282,86 @@ function getContactTypeLabel(type: string): string {
           <button @click="showContactModal = false" class="btn btn-secondary">Cancel</button>
           <button @click="saveContact" :disabled="!contactForm.name" class="btn btn-primary">
             {{ editingContact ? 'Save Changes' : 'Add Contact' }}
+          </button>
+        </div>
+      </div>
+    </div>
+
+    <!-- Action Item Modal -->
+    <div v-if="showActionItemModal" class="fixed inset-0 bg-black/50 flex items-center justify-center z-50" @click.self="showActionItemModal = false">
+      <div class="bg-white rounded-xl w-full max-w-lg mx-4 shadow-xl">
+        <div class="px-6 py-4 border-b border-surface-200">
+          <h3 class="text-lg font-semibold text-surface-900">
+            {{ editingActionItem ? 'Edit Action Item' : 'Add Action Item' }}
+          </h3>
+        </div>
+        
+        <div class="p-6 space-y-4">
+          <div>
+            <label class="block text-sm font-medium text-surface-700 mb-1">Description *</label>
+            <input v-model="actionItemForm.description" type="text" class="input w-full" placeholder="What are we waiting on?" />
+          </div>
+          
+          <div class="grid grid-cols-2 gap-4">
+            <div>
+              <label class="block text-sm font-medium text-surface-700 mb-1">Assigned To</label>
+              <input v-model="actionItemForm.assignedTo" type="text" class="input w-full" placeholder="Customer name or contact" />
+            </div>
+            <div>
+              <label class="block text-sm font-medium text-surface-700 mb-1">Status</label>
+              <select v-model="actionItemForm.status" class="select w-full">
+                <option value="Open">Open</option>
+                <option value="Waiting">Waiting for Response</option>
+                <option value="Closed">Closed</option>
+              </select>
+            </div>
+          </div>
+
+          <div>
+            <label class="block text-sm font-medium text-surface-700 mb-1">Due Date</label>
+            <input v-model="actionItemForm.dueDate" type="date" class="input w-full" />
+          </div>
+
+          <div>
+            <label class="block text-sm font-medium text-surface-700 mb-1">Notes</label>
+            <textarea v-model="actionItemForm.notes" rows="2" class="input w-full resize-none" placeholder="Additional context..."></textarea>
+          </div>
+        </div>
+
+        <div class="px-6 py-4 border-t border-surface-200 flex justify-end gap-3">
+          <button @click="showActionItemModal = false" class="btn btn-secondary">Cancel</button>
+          <button @click="saveActionItem" :disabled="!actionItemForm.description" class="btn btn-primary">
+            {{ editingActionItem ? 'Save Changes' : 'Add Item' }}
+          </button>
+        </div>
+      </div>
+    </div>
+
+    <!-- Punch List Modal -->
+    <div v-if="showPunchListModal" class="fixed inset-0 bg-black/50 flex items-center justify-center z-50" @click.self="showPunchListModal = false">
+      <div class="bg-white rounded-xl w-full max-w-lg mx-4 shadow-xl">
+        <div class="px-6 py-4 border-b border-surface-200">
+          <h3 class="text-lg font-semibold text-surface-900">
+            {{ editingPunchListItem ? 'Edit Punch List Item' : 'Add Punch List Item' }}
+          </h3>
+        </div>
+        
+        <div class="p-6 space-y-4">
+          <div>
+            <label class="block text-sm font-medium text-surface-700 mb-1">Description *</label>
+            <input v-model="punchListForm.description" type="text" class="input w-full" placeholder="What needs to be verified?" />
+          </div>
+
+          <div>
+            <label class="block text-sm font-medium text-surface-700 mb-1">Notes</label>
+            <textarea v-model="punchListForm.notes" rows="2" class="input w-full resize-none" placeholder="Additional details..."></textarea>
+          </div>
+        </div>
+
+        <div class="px-6 py-4 border-t border-surface-200 flex justify-end gap-3">
+          <button @click="showPunchListModal = false" class="btn btn-secondary">Cancel</button>
+          <button @click="savePunchListItem" :disabled="!punchListForm.description" class="btn btn-primary">
+            {{ editingPunchListItem ? 'Save Changes' : 'Add Item' }}
           </button>
         </div>
       </div>
