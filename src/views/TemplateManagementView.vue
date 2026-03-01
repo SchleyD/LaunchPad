@@ -135,12 +135,6 @@ function getMilestoneLabel(milestone: number): string {
   return labels[milestone] || `${milestone}%`
 }
 
-function getAssigneeLabel(assignee: string): string {
-  if (assignee === '[ProjectOwner]') return 'Project Owner'
-  const user = mockUsers.find(u => u.id === assignee)
-  return user?.name || assignee
-}
-
 function getDepartmentLabel(departmentId: string | null | undefined): string {
   if (!departmentId) return 'None'
   const dept = mockDepartments.find(d => d.id === departmentId)

@@ -1,4 +1,4 @@
-import type { Project, Task, User, ReviewNote, TaskTemplate, ProjectType, Department, TaskPhase } from '@/types'
+import type { Project, Task, User, ReviewNote, TaskTemplate, ProjectType, Department } from '@/types'
 
 // Departments
 export const mockDepartments: Department[] = [
