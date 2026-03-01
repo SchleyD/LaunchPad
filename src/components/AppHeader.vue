@@ -41,12 +41,12 @@ function switchUser() {
     </button>
     
     <div class="flex items-center gap-3">
-      <div class="w-8 h-8 bg-primary-500 rounded-lg flex items-center justify-center">
-        <svg class="w-5 h-5 text-white" viewBox="0 0 24 24" fill="currentColor">
-          <path d="M8 5v14l11-7z" />
-        </svg>
-      </div>
-      <span class="text-lg font-semibold text-surface-900">Launchpad</span>
+      <img 
+        src="/launchpad-logo.jpg" 
+        alt="Launchpad" 
+        class="w-9 h-9 rounded-lg object-cover"
+      />
+      <span class="text-lg font-semibold text-primary-500">Launchpad</span>
     </div>
     
     <div class="ml-auto flex items-center gap-4">

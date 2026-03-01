@@ -7,38 +7,41 @@ export default {
   theme: {
     extend: {
       colors: {
+        // AWS Deep Blue - Primary brand color
         primary: {
-          50: '#eff6ff',
-          100: '#dbeafe',
-          200: '#bfdbfe',
-          300: '#93c5fd',
-          400: '#60a5fa',
-          500: '#146eb4',
-          600: '#0f5a94',
-          700: '#0c4a7a',
-          800: '#093a61',
-          900: '#062a48',
+          50: '#EAF2F8',   // Light blue background tint
+          100: '#D5E5F1',
+          200: '#ABCBE3',
+          300: '#81B1D5',
+          400: '#5797C7',
+          500: '#123F6D',   // AWS Deep Blue (main)
+          600: '#0F3258',   // Hover Blue
+          700: '#0C2744',
+          800: '#091C31',
+          900: '#06111D',
         },
+        // AWS Yellow - Accent (use sparingly)
         accent: {
-          50: '#fefce8',
-          100: '#fef9c3',
-          200: '#fef08a',
-          300: '#fde047',
-          400: '#facc15',
-          500: '#d4a012',
-          600: '#b8860f',
+          50: '#FFFBEB',
+          100: '#FEF3C7',
+          200: '#FDE68A',
+          300: '#FCD34D',
+          400: '#F2B705',   // AWS Yellow (main)
+          500: '#D4A004',
+          600: '#B38B03',
         },
+        // Neutrals per brand kit
         surface: {
-          50: '#fafafa',
-          100: '#f5f5f5',
-          200: '#e5e5e5',
-          300: '#d4d4d4',
-          400: '#a3a3a3',
-          500: '#737373',
-          600: '#525252',
-          700: '#404040',
-          800: '#262626',
-          900: '#171717',
+          50: '#F8FAFC',   // Background
+          100: '#F1F5F9',
+          200: '#E5E7EB',   // Border Gray
+          300: '#D1D5DB',
+          400: '#9CA3AF',
+          500: '#6B7280',   // Mid Gray
+          600: '#4B5563',
+          700: '#374151',
+          800: '#1F2933',   // Dark Text
+          900: '#111827',
         }
       },
       fontFamily: {

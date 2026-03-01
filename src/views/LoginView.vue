@@ -22,13 +22,13 @@ function handleLogin(userId: string) {
     <div class="w-full max-w-md">
       <!-- Logo and Title -->
       <div class="text-center mb-8">
-        <div class="w-16 h-16 bg-primary-500 rounded-2xl flex items-center justify-center mx-auto mb-4">
-          <svg class="w-10 h-10 text-white" viewBox="0 0 24 24" fill="currentColor">
-            <path d="M8 5v14l11-7z" />
-          </svg>
-        </div>
-        <h1 class="text-2xl font-bold text-surface-900">Welcome to Launchpad</h1>
-        <p class="text-surface-500 mt-2">Select your account to continue</p>
+        <img 
+          src="/launchpad-logo.jpg" 
+          alt="Launchpad" 
+          class="w-20 h-20 rounded-2xl mx-auto mb-4 shadow-lg"
+        />
+        <h1 class="text-2xl font-bold text-primary-500">Welcome to Launchpad</h1>
+        <p class="text-surface-500 mt-2">Mission Control for Customer Implementation</p>
       </div>
 
       <!-- User Selection Card -->
