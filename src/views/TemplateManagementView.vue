@@ -7,6 +7,26 @@ import { projectTypes, taskCategories, mockUsers, mockDepartments } from '@/data
 
 const store = useProjectStore()
 
+// Editing state
+const editingTemplate = ref<TaskTemplate | null>(null)
+const isCreating = ref(false)
+
+// Filter state
+const filterType = ref<ProjectType | 'All'>('All')
+
+// Form state for create/edit
+const formData = ref({
+  title: '',
+  projectTypes: [] as ProjectType[],
+  phase: 'Inhouse Planning' as TaskPhase,
+  milestone: 20,
+  category: 'Setup' as TaskCategory,
+  estimatedHours: 1,
+  assignee: '[ProjectOwner]' as string,
+  departmentId: null as string | null,
+  subtasks: [] as SubtaskTemplate[]
+})
+
 // Historical stats for estimation suggestion
 const historicalStats = ref<{ 
   avgActualHours: number | null, 
@@ -33,26 +53,6 @@ function useSuggestedHours() {
     formData.value.estimatedHours = historicalStats.value.avgActualHours
   }
 }
-
-// Editing state
-const editingTemplate = ref<TaskTemplate | null>(null)
-const isCreating = ref(false)
-
-// Filter state
-const filterType = ref<ProjectType | 'All'>('All')
-
-// Form state for create/edit
-const formData = ref({
-  title: '',
-  projectTypes: [] as ProjectType[],
-  phase: 'Inhouse Planning' as TaskPhase,
-  milestone: 20,
-  category: 'Setup' as TaskCategory,
-  estimatedHours: 1,
-  assignee: '[ProjectOwner]' as string,
-  departmentId: null as string | null,
-  subtasks: [] as SubtaskTemplate[]
-})
 
 // Generate unique ID for subtasks
 function generateSubtaskId(): string {
