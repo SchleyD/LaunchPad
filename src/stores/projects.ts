@@ -1,6 +1,7 @@
 import { defineStore } from 'pinia'
 import { ref, computed } from 'vue'
 import type { Project, Task, TaskStatus, TimeEntry, TimeCategory, ReviewNote, ProjectChangeSummary, TaskTemplate, ProjectType, ProjectCreatePayload } from '@/types'
+import { DEFAULT_PHASES } from '@/types'
 import { mockProjects, mockTaskTemplates } from '@/data/mockData'
 import { useAuthStore } from './auth'
 import { createClient } from '@supabase/supabase-js'
@@ -14,9 +15,28 @@ export const useProjectStore = defineStore('projects', () => {
   // State
   const projects = ref<Project[]>(mockProjects)
   const taskTemplates = ref<TaskTemplate[]>(mockTaskTemplates)
+  const phases = ref<string[]>([...DEFAULT_PHASES])
   const lastReviewDate = ref<Date>(new Date(Date.now() - 7 * 24 * 60 * 60 * 1000)) // 7 days ago
   const isLoading = ref(false)
   const hasLoadedFromDb = ref(false)
+
+  // Phase management
+  function addPhase(phaseName: string) {
+    if (!phases.value.includes(phaseName)) {
+      phases.value.push(phaseName)
+    }
+  }
+
+  function removePhase(phaseName: string) {
+    const index = phases.value.indexOf(phaseName)
+    if (index > -1) {
+      phases.value.splice(index, 1)
+    }
+  }
+
+  function reorderPhases(newOrder: string[]) {
+    phases.value = newOrder
+  }
 
   // Load projects from Supabase
   async function loadProjects() {
@@ -667,11 +687,17 @@ export const useProjectStore = defineStore('projects', () => {
     // State
     projects,
     taskTemplates,
+    phases,
     lastReviewDate,
     isLoading,
     
     // Data loading
     loadProjects,
+    
+    // Phase Management
+    addPhase,
+    removePhase,
+    reorderPhases,
     
     // Getters
     activeProjects,

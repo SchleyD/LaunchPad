@@ -2,7 +2,6 @@
 import { ref, computed, watch } from 'vue'
 import { useProjectStore } from '@/stores/projects'
 import type { TaskTemplate, ProjectType, TaskCategory, TaskPhase, SubtaskTemplate } from '@/types'
-import { TASK_PHASES } from '@/types'
 import { projectTypes, taskCategories, mockUsers, mockDepartments } from '@/data/mockData'
 
 const store = useProjectStore()
@@ -14,6 +13,27 @@ const isCreating = ref(false)
 // Filter state
 const filterType = ref<ProjectType | 'All'>('All')
 const viewMode = ref<'milestone' | 'phase'>('milestone')
+
+// Phase management state
+const isManagingPhases = ref(false)
+const newPhaseName = ref('')
+
+function addNewPhase() {
+  if (newPhaseName.value.trim()) {
+    store.addPhase(newPhaseName.value.trim())
+    newPhaseName.value = ''
+  }
+}
+
+function removePhase(phase: string) {
+  // Check if any templates use this phase
+  const templatesUsingPhase = store.taskTemplates.filter(t => t.phase === phase)
+  if (templatesUsingPhase.length > 0) {
+    alert(`Cannot remove "${phase}" - ${templatesUsingPhase.length} template(s) use this phase. Update them first.`)
+    return
+  }
+  store.removePhase(phase)
+}
 
 // Form state for create/edit
 const formData = ref({
@@ -109,13 +129,13 @@ const templatesByMilestone = computed(() => {
 
 const templatesByPhase = computed(() => {
   const grouped: Record<string, TaskTemplate[]> = {}
-  TASK_PHASES.forEach(phase => {
+  store.phases.forEach(phase => {
     grouped[phase] = store.taskTemplates
       .filter(t => t.phase === phase)
       .filter(t => filterType.value === 'All' || t.projectTypes.includes(filterType.value))
       .sort((a, b) => a.order - b.order)
   })
-  // Add "No Phase" for templates without a phase
+  // Add "Unassigned" for templates without a phase
   grouped['Unassigned'] = store.taskTemplates
     .filter(t => !t.phase)
     .filter(t => filterType.value === 'All' || t.projectTypes.includes(filterType.value))
@@ -288,28 +308,91 @@ function toggleProjectType(type: ProjectType) {
       </div>
 
       <!-- View Mode Toggle -->
-      <div class="flex items-center gap-1 bg-surface-100 rounded-lg p-1">
+      <div class="flex items-center gap-2">
+        <div class="flex items-center gap-1 bg-surface-100 rounded-lg p-1">
+          <button
+            @click="viewMode = 'milestone'"
+            :class="[
+              'px-3 py-1.5 rounded-md text-sm font-medium transition-colors',
+              viewMode === 'milestone' 
+                ? 'bg-white text-primary-500 shadow-sm' 
+                : 'text-surface-500 hover:text-surface-700'
+            ]"
+          >
+            By Milestone
+          </button>
+          <button
+            @click="viewMode = 'phase'"
+            :class="[
+              'px-3 py-1.5 rounded-md text-sm font-medium transition-colors',
+              viewMode === 'phase' 
+                ? 'bg-white text-primary-500 shadow-sm' 
+                : 'text-surface-500 hover:text-surface-700'
+            ]"
+          >
+            By Phase
+          </button>
+        </div>
         <button
-          @click="viewMode = 'milestone'"
+          @click="isManagingPhases = !isManagingPhases"
           :class="[
             'px-3 py-1.5 rounded-md text-sm font-medium transition-colors',
-            viewMode === 'milestone' 
-              ? 'bg-white text-primary-500 shadow-sm' 
-              : 'text-surface-500 hover:text-surface-700'
+            isManagingPhases 
+              ? 'bg-primary-500 text-white' 
+              : 'bg-surface-100 text-surface-600 hover:bg-surface-200'
           ]"
         >
-          By Milestone
+          Manage Phases
         </button>
-        <button
-          @click="viewMode = 'phase'"
-          :class="[
-            'px-3 py-1.5 rounded-md text-sm font-medium transition-colors',
-            viewMode === 'phase' 
-              ? 'bg-white text-primary-500 shadow-sm' 
-              : 'text-surface-500 hover:text-surface-700'
-          ]"
+      </div>
+    </div>
+
+    <!-- Phase Management Panel -->
+    <div v-if="isManagingPhases" class="bg-white border border-surface-200 rounded-lg p-4 mb-6">
+      <h3 class="font-medium text-surface-800 mb-3">Manage Phases</h3>
+      <p class="text-xs text-surface-500 mb-4">
+        Add, remove, or reorder phases. Templates inherit their project type (HW/SW/HW+SW) to determine which tasks appear.
+      </p>
+      
+      <!-- Current Phases -->
+      <div class="space-y-2 mb-4">
+        <div 
+          v-for="(phase, index) in store.phases" 
+          :key="phase"
+          class="flex items-center gap-2 p-2 bg-surface-50 rounded-md"
         >
-          By Phase
+          <span class="text-xs text-surface-400 w-6">{{ index + 1 }}.</span>
+          <span class="flex-1 text-sm text-surface-700">{{ phase }}</span>
+          <span class="text-xs text-surface-400">
+            {{ store.taskTemplates.filter(t => t.phase === phase).length }} templates
+          </span>
+          <button
+            @click="removePhase(phase)"
+            class="text-xs text-red-500 hover:text-red-600 px-2 py-1"
+            :disabled="store.taskTemplates.filter(t => t.phase === phase).length > 0"
+            :class="{ 'opacity-50 cursor-not-allowed': store.taskTemplates.filter(t => t.phase === phase).length > 0 }"
+          >
+            Remove
+          </button>
+        </div>
+      </div>
+      
+      <!-- Add New Phase -->
+      <div class="flex items-center gap-2">
+        <input
+          v-model="newPhaseName"
+          type="text"
+          placeholder="New phase name..."
+          class="flex-1 px-3 py-2 border border-surface-200 rounded-md text-sm focus:outline-none focus:ring-2 focus:ring-primary-500"
+          @keyup.enter="addNewPhase"
+        />
+        <button
+          @click="addNewPhase"
+          :disabled="!newPhaseName.trim()"
+          class="btn-primary text-sm px-4 py-2"
+          :class="{ 'opacity-50 cursor-not-allowed': !newPhaseName.trim() }"
+        >
+          Add Phase
         </button>
       </div>
     </div>
@@ -362,7 +445,7 @@ function toggleProjectType(type: ProjectType) {
             v-model="formData.phase"
             class="w-full px-3 py-2 border border-slate-300 rounded-md text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
           >
-            <option v-for="phase in TASK_PHASES" :key="phase" :value="phase">
+            <option v-for="phase in store.phases" :key="phase" :value="phase">
               {{ phase }}
             </option>
           </select>
@@ -638,7 +721,7 @@ function toggleProjectType(type: ProjectType) {
 
     <!-- Templates grouped by phase -->
     <div v-else class="space-y-4">
-      <div v-for="phase in [...TASK_PHASES, 'Unassigned']" :key="phase" class="bg-white border border-surface-200 rounded-lg overflow-hidden">
+      <div v-for="phase in [...store.phases, 'Unassigned']" :key="phase" class="bg-white border border-surface-200 rounded-lg overflow-hidden">
         <div class="bg-primary-50 px-4 py-3 border-b border-primary-100">
           <h3 class="font-medium text-primary-700">{{ phase }}</h3>
           <p class="text-xs text-primary-500 mt-0.5">

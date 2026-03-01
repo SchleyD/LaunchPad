@@ -754,12 +754,12 @@ export const mockTaskTemplates: TaskTemplate[] = [
     updatedAt: createDate(100)
   },
   
-  // ===== SITE-HW (80%) =====
+  // ===== ONSITE (80%) =====
   {
     id: 'tmpl-9',
     title: 'Onsite hardware installation',
     projectTypes: ['HardwareOnly', 'HardwareSoftware'],
-    phase: 'Site-HW',
+    phase: 'Onsite',
     milestone: 80,
     category: 'Installation',
     estimatedHours: 16,
@@ -776,17 +776,17 @@ export const mockTaskTemplates: TaskTemplate[] = [
     updatedAt: createDate(100)
   },
   
-  // ===== SITE-SW (80%) =====
+  // Software onsite tasks (also in Onsite phase, differentiated by projectTypes)
   {
     id: 'tmpl-10',
     title: 'Software installation and configuration',
     projectTypes: ['SoftwareOnly'],
-    phase: 'Site-SW',
+    phase: 'Onsite',
     milestone: 80,
     category: 'Installation',
     estimatedHours: 6,
     assignee: '[ProjectOwner]',
-    order: 1,
+    order: 2,
     createdAt: createDate(100),
     updatedAt: createDate(100)
   },
@@ -794,7 +794,7 @@ export const mockTaskTemplates: TaskTemplate[] = [
     id: 'tmpl-12',
     title: 'User acceptance testing',
     projectTypes: ['SoftwareOnly', 'HardwareSoftware'],
-    phase: 'Site-SW',
+    phase: 'Onsite',
     milestone: 80,
     category: 'Testing',
     estimatedHours: 4,
