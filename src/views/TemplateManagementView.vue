@@ -13,6 +13,7 @@ const isCreating = ref(false)
 
 // Filter state
 const filterType = ref<ProjectType | 'All'>('All')
+const viewMode = ref<'milestone' | 'phase'>('milestone')
 
 // Form state for create/edit
 const formData = ref({
@@ -103,6 +104,22 @@ const templatesByMilestone = computed(() => {
       .filter(t => filterType.value === 'All' || t.projectTypes.includes(filterType.value))
       .sort((a, b) => a.order - b.order)
   })
+  return grouped
+})
+
+const templatesByPhase = computed(() => {
+  const grouped: Record<string, TaskTemplate[]> = {}
+  TASK_PHASES.forEach(phase => {
+    grouped[phase] = store.taskTemplates
+      .filter(t => t.phase === phase)
+      .filter(t => filterType.value === 'All' || t.projectTypes.includes(filterType.value))
+      .sort((a, b) => a.order - b.order)
+  })
+  // Add "No Phase" for templates without a phase
+  grouped['Unassigned'] = store.taskTemplates
+    .filter(t => !t.phase)
+    .filter(t => filterType.value === 'All' || t.projectTypes.includes(filterType.value))
+    .sort((a, b) => a.order - b.order)
   return grouped
 })
 
@@ -245,33 +262,62 @@ function toggleProjectType(type: ProjectType) {
       </button>
     </div>
 
-    <!-- Filter by Project Type -->
-    <div class="flex items-center gap-2 mb-6">
-      <span class="text-sm text-slate-600">Show:</span>
-      <button
-        @click="filterType = 'All'"
-        :class="[
-          'px-3 py-1.5 rounded-md text-sm font-medium transition-colors',
-          filterType === 'All' 
-            ? 'bg-slate-800 text-white' 
-            : 'bg-slate-100 text-slate-600 hover:bg-slate-200'
-        ]"
-      >
-        All ({{ store.taskTemplates.length }})
-      </button>
-      <button
-        v-for="pt in projectTypes"
-        :key="pt.value"
-        @click="filterType = pt.value"
-        :class="[
-          'px-3 py-1.5 rounded-md text-sm font-medium transition-colors',
-          filterType === pt.value 
-            ? getProjectTypeClass(pt.value) + ' ring-2 ring-offset-1 ring-slate-400' 
-            : 'bg-slate-100 text-slate-600 hover:bg-slate-200'
-        ]"
-      >
-        {{ pt.label }} ({{ store.taskTemplates.filter(t => t.projectTypes.includes(pt.value)).length }})
-      </button>
+    <!-- Filters and View Toggle -->
+    <div class="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 mb-6">
+      <!-- Filter by Project Type -->
+      <div class="flex items-center gap-2 overflow-x-auto pb-2 sm:pb-0">
+        <span class="text-sm text-surface-500 whitespace-nowrap">Show:</span>
+        <button
+          @click="filterType = 'All'"
+          :class="[
+            'px-3 py-1.5 rounded-md text-sm font-medium transition-colors whitespace-nowrap',
+            filterType === 'All' 
+              ? 'bg-primary-500 text-white' 
+              : 'bg-surface-100 text-surface-600 hover:bg-surface-200'
+          ]"
+        >
+          All ({{ store.taskTemplates.length }})
+        </button>
+        <button
+          v-for="pt in projectTypes"
+          :key="pt.value"
+          @click="filterType = pt.value"
+          :class="[
+            'px-3 py-1.5 rounded-md text-sm font-medium transition-colors whitespace-nowrap',
+            filterType === pt.value 
+              ? 'bg-primary-500 text-white' 
+              : 'bg-surface-100 text-surface-600 hover:bg-surface-200'
+          ]"
+        >
+          {{ pt.label }} ({{ store.taskTemplates.filter(t => t.projectTypes.includes(pt.value)).length }})
+        </button>
+      </div>
+
+      <!-- View Mode Toggle -->
+      <div class="flex items-center gap-1 bg-surface-100 rounded-lg p-1">
+        <button
+          @click="viewMode = 'milestone'"
+          :class="[
+            'px-3 py-1.5 rounded-md text-sm font-medium transition-colors',
+            viewMode === 'milestone' 
+              ? 'bg-white text-primary-500 shadow-sm' 
+              : 'text-surface-500 hover:text-surface-700'
+          ]"
+        >
+          By Milestone
+        </button>
+        <button
+          @click="viewMode = 'phase'"
+          :class="[
+            'px-3 py-1.5 rounded-md text-sm font-medium transition-colors',
+            viewMode === 'phase' 
+              ? 'bg-white text-primary-500 shadow-sm' 
+              : 'text-surface-500 hover:text-surface-700'
+          ]"
+        >
+          By Phase
+        </button>
+      </div>
     </div>
 
     <!-- Create/Edit Form -->
@@ -536,94 +582,116 @@ function toggleProjectType(type: ProjectType) {
     </div>
 
     <!-- Templates grouped by milestone -->
-    <div class="space-y-6">
-      <div v-for="milestone in milestones" :key="milestone" class="bg-white border border-slate-200 rounded-lg overflow-hidden">
-        <div class="bg-slate-50 px-4 py-3 border-b border-slate-200">
-          <h3 class="font-medium text-slate-900">{{ getMilestoneLabel(milestone) }}</h3>
-          <p class="text-xs text-slate-500 mt-0.5">
+    <div v-if="viewMode === 'milestone'" class="space-y-4">
+      <div v-for="milestone in milestones" :key="milestone" class="bg-white border border-surface-200 rounded-lg overflow-hidden">
+        <div class="bg-surface-50 px-4 py-3 border-b border-surface-200">
+          <h3 class="font-medium text-surface-800">{{ getMilestoneLabel(milestone) }}</h3>
+          <p class="text-xs text-surface-500 mt-0.5">
             {{ templatesByMilestone[milestone].length }} task{{ templatesByMilestone[milestone].length !== 1 ? 's' : '' }}
           </p>
         </div>
 
-        <div v-if="templatesByMilestone[milestone].length === 0" class="px-4 py-8 text-center text-slate-400 text-sm">
+        <div v-if="templatesByMilestone[milestone].length === 0" class="px-4 py-6 text-center text-surface-400 text-sm">
           No tasks at this milestone
         </div>
 
-        <div v-else class="divide-y divide-slate-100">
+        <div v-else class="divide-y divide-surface-100">
           <div 
             v-for="template in templatesByMilestone[milestone]" 
             :key="template.id"
-            class="px-4 py-3 hover:bg-slate-50 transition-colors"
+            class="px-4 py-3 hover:bg-surface-50 transition-colors"
           >
-            <div class="flex items-start justify-between gap-4">
+            <div class="flex items-start justify-between gap-3">
               <div class="flex-1 min-w-0">
                 <div class="flex items-center gap-2 flex-wrap">
-                  <span class="font-medium text-slate-900">{{ template.title }}</span>
-                  <span class="text-xs px-2 py-0.5 bg-slate-100 text-slate-600 rounded">
-                    {{ template.category }}
-                  </span>
-                  <span v-if="template.phase" class="text-xs px-2 py-0.5 bg-cyan-100 text-cyan-700 rounded">
+                  <span class="font-medium text-surface-800">{{ template.title }}</span>
+                  <span v-if="template.phase" class="text-xs px-2 py-0.5 bg-primary-50 text-primary-600 rounded font-medium">
                     {{ template.phase }}
                   </span>
-                  <span v-if="template.subtasks?.length" class="text-xs px-2 py-0.5 bg-violet-100 text-violet-700 rounded">
-                    {{ template.subtasks.length }} subtask{{ template.subtasks.length !== 1 ? 's' : '' }}
+                  <span v-if="template.subtasks?.length" class="text-xs text-surface-500">
+                    ({{ template.subtasks.length }} subtasks)
                   </span>
                 </div>
-                <div class="flex items-center gap-3 mt-1.5 text-xs text-slate-500 flex-wrap">
-                  <span>{{ template.estimatedHours }}h estimated</span>
-                  <span class="text-slate-300">|</span>
-                  <span>
-                    Assigned to: 
-                    <span :class="template.assignee === '[ProjectOwner]' ? 'text-blue-600' : 'text-slate-700'">
-                      {{ getAssigneeLabel(template.assignee) }}
-                    </span>
-                  </span>
-                  <template v-if="template.departmentId">
-                    <span class="text-slate-300">|</span>
-                    <span>
-                      Dept: 
-                      <span class="text-emerald-600 font-medium">
-                        {{ getDepartmentLabel(template.departmentId) }}
-                      </span>
-                    </span>
-                  </template>
-                </div>
-                <!-- Subtask list preview -->
-                <div v-if="template.subtasks?.length" class="mt-2 pl-4 border-l-2 border-slate-200">
-                  <div 
-                    v-for="subtask in template.subtasks.slice(0, 3)" 
-                    :key="subtask.id"
-                    class="text-xs text-slate-500 py-0.5"
-                  >
-                    <span class="text-slate-400 mr-1">-</span>
-                    {{ subtask.title }}
-                    <span class="text-slate-400">({{ subtask.estimatedHours }}h)</span>
-                  </div>
-                  <div v-if="template.subtasks.length > 3" class="text-xs text-slate-400 py-0.5">
-                    + {{ template.subtasks.length - 3 }} more...
-                  </div>
-                </div>
-                <div class="flex gap-1.5 mt-2">
-                  <span 
-                    v-for="pt in template.projectTypes" 
-                    :key="pt"
-                    :class="['text-xs px-2 py-0.5 rounded', getProjectTypeClass(pt)]"
-                  >
-                    {{ projectTypes.find(p => p.value === pt)?.label }}
+                <div class="flex items-center gap-2 mt-1 text-xs text-surface-500">
+                  <span class="px-1.5 py-0.5 bg-surface-100 rounded">{{ template.category }}</span>
+                  <span>{{ template.estimatedHours }}h</span>
+                  <span v-if="template.departmentId" class="text-emerald-600">
+                    {{ getDepartmentLabel(template.departmentId) }}
                   </span>
                 </div>
               </div>
-              <div class="flex items-center gap-2">
+              <div class="flex items-center gap-1 shrink-0">
                 <button 
                   @click="startEdit(template)"
-                  class="text-sm text-blue-600 hover:text-blue-700 px-2 py-1"
+                  class="text-sm text-primary-500 hover:text-primary-600 px-2 py-1"
                   :disabled="isCreating || !!editingTemplate"
                 >
                   Edit
                 </button>
                 <button 
                   @click="deleteTemplate(template.id)"
-                  class="text-sm text-red-600 hover:text-red-700 px-2 py-1"
+                  class="text-sm text-red-500 hover:text-red-600 px-2 py-1"
+                  :disabled="isCreating || !!editingTemplate"
+                >
+                  Delete
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Templates grouped by phase -->
+    <div v-else class="space-y-4">
+      <div v-for="phase in [...TASK_PHASES, 'Unassigned']" :key="phase" class="bg-white border border-surface-200 rounded-lg overflow-hidden">
+        <div class="bg-primary-50 px-4 py-3 border-b border-primary-100">
+          <h3 class="font-medium text-primary-700">{{ phase }}</h3>
+          <p class="text-xs text-primary-500 mt-0.5">
+            {{ templatesByPhase[phase]?.length || 0 }} task{{ (templatesByPhase[phase]?.length || 0) !== 1 ? 's' : '' }}
+          </p>
+        </div>
+
+        <div v-if="!templatesByPhase[phase]?.length" class="px-4 py-6 text-center text-surface-400 text-sm">
+          No tasks in this phase
+        </div>
+
+        <div v-else class="divide-y divide-surface-100">
+          <div 
+            v-for="template in templatesByPhase[phase]" 
+            :key="template.id"
+            class="px-4 py-3 hover:bg-surface-50 transition-colors"
+          >
+            <div class="flex items-start justify-between gap-3">
+              <div class="flex-1 min-w-0">
+                <div class="flex items-center gap-2 flex-wrap">
+                  <span class="font-medium text-surface-800">{{ template.title }}</span>
+                  <span class="text-xs px-2 py-0.5 bg-surface-100 text-surface-600 rounded">
+                    {{ getMilestoneLabel(template.milestone).split(' - ')[0] }}
+                  </span>
+                  <span v-if="template.subtasks?.length" class="text-xs text-surface-500">
+                    ({{ template.subtasks.length }} subtasks)
+                  </span>
+                </div>
+                <div class="flex items-center gap-2 mt-1 text-xs text-surface-500">
+                  <span class="px-1.5 py-0.5 bg-surface-100 rounded">{{ template.category }}</span>
+                  <span>{{ template.estimatedHours }}h</span>
+                  <span v-if="template.departmentId" class="text-emerald-600">
+                    {{ getDepartmentLabel(template.departmentId) }}
+                  </span>
+                </div>
+              </div>
+              <div class="flex items-center gap-1 shrink-0">
+                <button 
+                  @click="startEdit(template)"
+                  class="text-sm text-primary-500 hover:text-primary-600 px-2 py-1"
+                  :disabled="isCreating || !!editingTemplate"
+                >
+                  Edit
+                </button>
+                <button 
+                  @click="deleteTemplate(template.id)"
+                  class="text-sm text-red-500 hover:text-red-600 px-2 py-1"
                   :disabled="isCreating || !!editingTemplate"
                 >
                   Delete
