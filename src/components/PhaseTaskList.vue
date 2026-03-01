@@ -1,7 +1,23 @@
 <script setup lang="ts">
 import { ref, computed } from 'vue'
 import type { Task, TaskStatus, TaskPhase } from '@/types'
-import { TASK_PHASES, PHASE_COLORS } from '@/types'
+import { useProjectStore } from '@/stores/projects'
+
+const projectStore = useProjectStore()
+
+// Phase color mapping (using primary brand color for consistency)
+const getPhaseColor = (phase: string): string => {
+  const colors: Record<string, string> = {
+    'Special Proj. Notes': 'bg-red-500',
+    'Inhouse Planning': 'bg-primary-500',
+    'Inhouse-HW/SW': 'bg-primary-600',
+    'Inhouse Documentation': 'bg-primary-500',
+    'Onsite': 'bg-teal-600',
+    'Shipping/Install': 'bg-amber-500',
+    'Go Live-Follow Up': 'bg-emerald-500'
+  }
+  return colors[phase] || 'bg-primary-500'
+}
 
 interface Props {
   tasks: Task[]
@@ -46,8 +62,8 @@ const taskHierarchy = computed(() => {
 const tasksByPhase = computed(() => {
   const grouped: Record<TaskPhase, Task[]> = {} as Record<TaskPhase, Task[]>
   
-  // Initialize all phases
-  TASK_PHASES.forEach(phase => {
+  // Initialize all phases from store
+  projectStore.phases.forEach(phase => {
     grouped[phase] = []
   })
   
@@ -64,7 +80,7 @@ const tasksByPhase = computed(() => {
 
 // Phases that have tasks
 const activePhases = computed(() => {
-  return TASK_PHASES.filter(phase => tasksByPhase.value[phase].length > 0)
+  return projectStore.phases.filter(phase => tasksByPhase.value[phase]?.length > 0)
 })
 
 // Phase stats
@@ -191,7 +207,7 @@ function getProgressSegments(phase: TaskPhase) {
         <span 
           :class="[
             'px-2.5 py-1 rounded text-xs font-semibold text-white shrink-0',
-            PHASE_COLORS[phase]
+            getPhaseColor(phase)
           ]"
         >
           {{ phase }}
