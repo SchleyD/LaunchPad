@@ -71,6 +71,31 @@ export const useProjectStore = defineStore('projects', () => {
         console.error('[v0] Error loading tasks:', taskError)
       }
 
+      // Load time entries for all tasks
+      const taskIds = (taskRows || []).map(t => t.id)
+      let timeEntryRows: any[] = []
+      let commentRows: any[] = []
+      
+      if (taskIds.length > 0) {
+        const { data: teData } = await supabase
+          .from('time_entries')
+          .select('*')
+          .in('task_id', taskIds)
+        timeEntryRows = teData || []
+
+        const { data: cData } = await supabase
+          .from('comments')
+          .select('*')
+          .in('task_id', taskIds)
+        commentRows = cData || []
+      }
+
+      // Load review notes for all projects
+      const { data: reviewNoteRows } = await supabase
+        .from('review_notes')
+        .select('*')
+        .in('project_id', projectIds)
+
       // Convert database rows to Project objects
       const dbProjects: Project[] = projectRows.map(row => {
         const projectTasks = (taskRows || [])
@@ -86,10 +111,39 @@ export const useProjectStore = defineStore('projects', () => {
             milestone: t.milestone,
             category: t.category,
             estimatedHours: t.estimated_hours,
-            timeEntries: [],
-            comments: [],
+            timeEntries: timeEntryRows
+              .filter(te => te.task_id === t.id)
+              .map(te => ({
+                id: te.id,
+                duration: te.duration,
+                category: te.category,
+                note: te.note || '',
+                createdAt: new Date(te.created_at),
+                createdBy: te.created_by || 'Unknown'
+              })),
+            comments: commentRows
+              .filter(c => c.task_id === t.id)
+              .map(c => ({
+                id: c.id,
+                text: c.text,
+                createdAt: new Date(c.created_at),
+                createdBy: c.created_by || 'Unknown'
+              })),
             createdAt: new Date(t.created_at),
             updatedAt: new Date(t.updated_at)
+          }))
+
+        const projectReviewNotes = (reviewNoteRows || [])
+          .filter(n => n.project_id === row.id)
+          .map(n => ({
+            id: n.id,
+            projectId: n.project_id,
+            text: n.text,
+            isReviewed: n.is_reviewed || false,
+            reviewedAt: n.reviewed_at ? new Date(n.reviewed_at) : undefined,
+            reviewedBy: n.reviewed_by || undefined,
+            createdAt: new Date(n.created_at),
+            createdBy: n.created_by || 'Unknown'
           }))
 
         return {
@@ -108,7 +162,7 @@ export const useProjectStore = defineStore('projects', () => {
           type: row.project_type === 'SoftwareOnly' ? 'SoftwareOnly' : 'Hardware',
           quotedHours: row.quoted_hours || {},
           tasks: projectTasks,
-          reviewNotes: [],
+          reviewNotes: projectReviewNotes,
           createdAt: new Date(row.created_at),
           updatedAt: new Date(row.updated_at)
         }
@@ -248,22 +302,29 @@ export const useProjectStore = defineStore('projects', () => {
   }
 
   // Actions
-  function updateTaskStatus(projectId: string, taskId: string, newStatus: TaskStatus) {
+  async function updateTaskStatus(projectId: string, taskId: string, newStatus: TaskStatus) {
     const project = projects.value.find(p => p.id === projectId)
     if (!project) return
 
     const task = project.tasks.find(t => t.id === taskId)
     if (!task) return
 
+    // Update local state
     task.status = newStatus
     task.updatedAt = new Date()
     project.updatedAt = new Date()
-
-    // Update project blocked status
     project.blocked = isProjectBlocked(project)
+
+    // Persist to database
+    if (supabase) {
+      await supabase.from('tasks').update({
+        status: newStatus,
+        updated_at: new Date().toISOString()
+      }).eq('id', taskId)
+    }
   }
 
-  function addTimeEntry(
+  async function addTimeEntry(
     projectId: string, 
     taskId: string, 
     duration: number, 
@@ -277,8 +338,9 @@ export const useProjectStore = defineStore('projects', () => {
     const task = project.tasks.find(t => t.id === taskId)
     if (!task) return
 
+    const entryId = crypto.randomUUID()
     const entry: TimeEntry = {
-      id: `te-${Date.now()}`,
+      id: entryId,
       duration,
       category,
       note,
@@ -286,12 +348,25 @@ export const useProjectStore = defineStore('projects', () => {
       createdBy: authStore.currentUser?.initials || 'Unknown'
     }
 
+    // Update local state
     task.timeEntries.push(entry)
     task.updatedAt = new Date()
     project.updatedAt = new Date()
+
+    // Persist to database
+    if (supabase) {
+      await supabase.from('time_entries').insert({
+        id: entryId,
+        task_id: taskId,
+        duration,
+        category,
+        note,
+        created_by: authStore.currentUser?.id || null
+      })
+    }
   }
 
-  function addTaskComment(projectId: string, taskId: string, text: string) {
+  async function addTaskComment(projectId: string, taskId: string, text: string) {
     const authStore = useAuthStore()
     const project = projects.value.find(p => p.id === projectId)
     if (!project) return
@@ -299,22 +374,34 @@ export const useProjectStore = defineStore('projects', () => {
     const task = project.tasks.find(t => t.id === taskId)
     if (!task) return
 
+    const commentId = crypto.randomUUID()
     task.comments.push({
-      id: `c-${Date.now()}`,
+      id: commentId,
       text,
       createdAt: new Date(),
       createdBy: authStore.currentUser?.initials || 'Unknown'
     })
     task.updatedAt = new Date()
+
+    // Persist to database
+    if (supabase) {
+      await supabase.from('comments').insert({
+        id: commentId,
+        task_id: taskId,
+        text,
+        created_by: authStore.currentUser?.id || null
+      })
+    }
   }
 
-  function addReviewNote(projectId: string, text: string) {
+  async function addReviewNote(projectId: string, text: string) {
     const authStore = useAuthStore()
     const project = projects.value.find(p => p.id === projectId)
     if (!project) return
 
+    const noteId = crypto.randomUUID()
     const note: ReviewNote = {
-      id: `rn-${Date.now()}`,
+      id: noteId,
       projectId,
       text,
       isReviewed: false,
@@ -322,10 +409,22 @@ export const useProjectStore = defineStore('projects', () => {
       createdBy: authStore.currentUser?.initials || 'Unknown'
     }
 
+    // Update local state
     project.reviewNotes.push(note)
+
+    // Persist to database
+    if (supabase) {
+      await supabase.from('review_notes').insert({
+        id: noteId,
+        project_id: projectId,
+        text,
+        is_reviewed: false,
+        created_by: authStore.currentUser?.id || null
+      })
+    }
   }
 
-  function markNoteAsReviewed(projectId: string, noteId: string) {
+  async function markNoteAsReviewed(projectId: string, noteId: string) {
     const authStore = useAuthStore()
     const project = projects.value.find(p => p.id === projectId)
     if (!project) return
@@ -333,12 +432,22 @@ export const useProjectStore = defineStore('projects', () => {
     const note = project.reviewNotes.find(n => n.id === noteId)
     if (!note) return
 
+    // Update local state
     note.isReviewed = true
     note.reviewedAt = new Date()
     note.reviewedBy = authStore.currentUser?.initials || 'Unknown'
+
+    // Persist to database
+    if (supabase) {
+      await supabase.from('review_notes').update({
+        is_reviewed: true,
+        reviewed_at: new Date().toISOString(),
+        reviewed_by: authStore.currentUser?.id || null
+      }).eq('id', noteId)
+    }
   }
 
-  function convertNoteToTask(projectId: string, noteId: string) {
+  async function convertNoteToTask(projectId: string, noteId: string) {
     const authStore = useAuthStore()
     const project = projects.value.find(p => p.id === projectId)
     if (!project) return
@@ -346,9 +455,10 @@ export const useProjectStore = defineStore('projects', () => {
     const note = project.reviewNotes.find(n => n.id === noteId)
     if (!note) return
 
+    const taskId = crypto.randomUUID()
     // Create task from note at 100% milestone (punch list)
     const newTask: Task = {
-      id: `t-${Date.now()}`,
+      id: taskId,
       projectId,
       title: note.text,
       owner: project.owner,
@@ -362,10 +472,32 @@ export const useProjectStore = defineStore('projects', () => {
       updatedAt: new Date()
     }
 
+    // Update local state
     project.tasks.push(newTask)
     note.isReviewed = true
     note.reviewedAt = new Date()
     note.reviewedBy = authStore.currentUser?.initials || 'Unknown'
+
+    // Persist to database
+    if (supabase) {
+      // Create task
+      await supabase.from('tasks').insert({
+        id: taskId,
+        project_id: projectId,
+        title: note.text,
+        status: 'Ready',
+        milestone: 100,
+        category: 'Punch List',
+        estimated_hours: 1
+      })
+      
+      // Mark note as reviewed
+      await supabase.from('review_notes').update({
+        is_reviewed: true,
+        reviewed_at: new Date().toISOString(),
+        reviewed_by: authStore.currentUser?.id || null
+      }).eq('id', noteId)
+    }
   }
 
   async function convertNoteToActionItem(projectId: string, noteId: string) {
@@ -404,13 +536,14 @@ export const useProjectStore = defineStore('projects', () => {
     }
   }
 
-  function addTask(projectId: string, task: Omit<Task, 'id' | 'projectId' | 'timeEntries' | 'comments' | 'createdAt' | 'updatedAt'>) {
+  async function addTask(projectId: string, task: Omit<Task, 'id' | 'projectId' | 'timeEntries' | 'comments' | 'createdAt' | 'updatedAt'>) {
     const project = projects.value.find(p => p.id === projectId)
     if (!project) return
 
+    const taskId = crypto.randomUUID()
     const newTask: Task = {
       ...task,
-      id: `t-${Date.now()}`,
+      id: taskId,
       projectId,
       timeEntries: [],
       comments: [],
@@ -418,8 +551,25 @@ export const useProjectStore = defineStore('projects', () => {
       updatedAt: new Date()
     }
 
+    // Update local state
     project.tasks.push(newTask)
     project.updatedAt = new Date()
+
+    // Persist to database
+    if (supabase) {
+      await supabase.from('tasks').insert({
+        id: taskId,
+        project_id: projectId,
+        title: task.title,
+        owner_id: null, // Would need to look up user ID
+        status: task.status,
+        phase: task.phase || null,
+        milestone: task.milestone,
+        category: task.category,
+        estimated_hours: task.estimatedHours,
+        parent_task_id: task.parentTaskId || null
+      })
+    }
   }
 
   function setLastReviewDate(date: Date) {
