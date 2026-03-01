@@ -5,6 +5,7 @@ import { useProjectStore } from '@/stores/projects'
 import type { Task, TaskStatus } from '@/types'
 import ProgressBar from '@/components/ProgressBar.vue'
 import TaskList from '@/components/TaskList.vue'
+import PhaseTaskList from '@/components/PhaseTaskList.vue'
 import TaskDrawer from '@/components/TaskDrawer.vue'
 import ProjectTimeTab from '@/components/ProjectTimeTab.vue'
 import ProjectInfoTab from '@/components/ProjectInfoTab.vue'
@@ -14,6 +15,7 @@ const router = useRouter()
 const store = useProjectStore()
 
 const activeTab = ref<'tasks' | 'info' | 'time' | 'emails'>('tasks')
+const taskViewMode = ref<'phases' | 'table'>('phases')
 const selectedTaskId = ref<string | null>(null)
 const statusFilter = ref<TaskStatus | 'all'>('all')
 const milestoneFilter = ref<number | 'all'>('all')
@@ -209,31 +211,79 @@ watch(() => route.params.id, () => {
 
     <!-- Tab Content -->
     <div v-if="activeTab === 'tasks'">
-      <!-- Filters -->
-      <div class="flex items-center gap-4 mb-4">
-        <div class="flex items-center gap-2">
-          <label class="text-sm text-surface-500">Status:</label>
-          <select v-model="statusFilter" class="select text-sm py-1.5 w-36">
-            <option value="all">All</option>
-            <option value="Backlog">Backlog</option>
-            <option value="Ready">Ready</option>
-            <option value="InProgress">In Progress</option>
-            <option value="Blocked">Blocked</option>
-            <option value="Waiting">Waiting</option>
-            <option value="Done">Done</option>
-            <option value="Canceled">Canceled</option>
-          </select>
+      <!-- View toggle and filters -->
+      <div class="flex items-center justify-between mb-4">
+        <!-- View mode toggle -->
+        <div class="flex items-center bg-surface-100 rounded-lg p-1">
+          <button
+            @click="taskViewMode = 'phases'"
+            :class="[
+              'px-3 py-1.5 text-sm font-medium rounded-md transition-colors',
+              taskViewMode === 'phases'
+                ? 'bg-white text-surface-900 shadow-sm'
+                : 'text-surface-500 hover:text-surface-700'
+            ]"
+          >
+            <span class="flex items-center gap-1.5">
+              <svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+                <path stroke-linecap="round" stroke-linejoin="round" d="M4 6h16M4 10h16M4 14h16M4 18h16" />
+              </svg>
+              Phases
+            </span>
+          </button>
+          <button
+            @click="taskViewMode = 'table'"
+            :class="[
+              'px-3 py-1.5 text-sm font-medium rounded-md transition-colors',
+              taskViewMode === 'table'
+                ? 'bg-white text-surface-900 shadow-sm'
+                : 'text-surface-500 hover:text-surface-700'
+            ]"
+          >
+            <span class="flex items-center gap-1.5">
+              <svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+                <path stroke-linecap="round" stroke-linejoin="round" d="M3 10h18M3 14h18m-9-4v8m-7 0h14a2 2 0 002-2V8a2 2 0 00-2-2H5a2 2 0 00-2 2v8a2 2 0 002 2z" />
+              </svg>
+              Table
+            </span>
+          </button>
         </div>
-        <div class="flex items-center gap-2">
-          <label class="text-sm text-surface-500">Milestone:</label>
-          <select v-model="milestoneFilter" class="select text-sm py-1.5 w-28">
-            <option value="all">All</option>
-            <option v-for="m in milestones" :key="m" :value="m">{{ m }}%</option>
-          </select>
+
+        <!-- Filters (only for table view) -->
+        <div v-if="taskViewMode === 'table'" class="flex items-center gap-4">
+          <div class="flex items-center gap-2">
+            <label class="text-sm text-surface-500">Status:</label>
+            <select v-model="statusFilter" class="select text-sm py-1.5 w-36">
+              <option value="all">All</option>
+              <option value="Backlog">Backlog</option>
+              <option value="Ready">Ready</option>
+              <option value="InProgress">In Progress</option>
+              <option value="Blocked">Blocked</option>
+              <option value="Waiting">Waiting</option>
+              <option value="Done">Done</option>
+              <option value="Canceled">Canceled</option>
+            </select>
+          </div>
+          <div class="flex items-center gap-2">
+            <label class="text-sm text-surface-500">Milestone:</label>
+            <select v-model="milestoneFilter" class="select text-sm py-1.5 w-28">
+              <option value="all">All</option>
+              <option v-for="m in milestones" :key="m" :value="m">{{ m }}%</option>
+            </select>
+          </div>
         </div>
       </div>
 
+      <!-- Phase view -->
+      <PhaseTaskList 
+        v-if="taskViewMode === 'phases'"
+        :tasks="project.tasks" 
+        @select-task="openTaskDrawer"
+      />
+
+      <!-- Table view -->
       <TaskList 
+        v-else
         :tasks="filteredTasks" 
         @select-task="openTaskDrawer"
       />

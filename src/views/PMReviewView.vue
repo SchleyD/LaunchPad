@@ -93,22 +93,22 @@ function isExpanded(projectId: string): boolean {
 </script>
 
 <template>
-  <div class="max-w-5xl">
+  <div class="max-w-5xl mx-auto">
     <div class="mb-6">
-      <h1 class="text-2xl font-semibold text-surface-900">PM Review</h1>
+      <h1 class="text-2xl font-semibold text-surface-800">PM Review</h1>
       <p class="text-sm text-surface-500 mt-1">Weekly project status review</p>
     </div>
 
-    <!-- Owner Filter -->
-    <div class="flex items-center gap-2 mb-6">
-      <span class="text-sm text-surface-600">Filter by Owner:</span>
+    <!-- Owner Filter - horizontal scroll on mobile -->
+    <div class="flex items-center gap-2 mb-6 overflow-x-auto pb-2">
+      <span class="text-sm text-surface-500 whitespace-nowrap">Filter:</span>
       <button
         @click="filterOwner = 'All'"
         :class="[
-          'px-3 py-1.5 rounded-md text-sm font-medium transition-colors',
+          'px-3 py-1.5 rounded-md text-sm font-medium transition-colors whitespace-nowrap',
           filterOwner === 'All' 
-            ? 'bg-slate-800 text-white' 
-            : 'bg-slate-100 text-slate-600 hover:bg-slate-200'
+            ? 'bg-primary-500 text-white' 
+            : 'bg-surface-100 text-surface-600 hover:bg-surface-200'
         ]"
       >
         All ({{ projectSummaries.length }})
@@ -118,10 +118,10 @@ function isExpanded(projectId: string): boolean {
         :key="owner.id"
         @click="filterOwner = owner.initials"
         :class="[
-          'px-3 py-1.5 rounded-md text-sm font-medium transition-colors flex items-center gap-2',
+          'px-3 py-1.5 rounded-md text-sm font-medium transition-colors flex items-center gap-1.5 whitespace-nowrap',
           filterOwner === owner.initials 
-            ? 'bg-primary-600 text-white' 
-            : 'bg-slate-100 text-slate-600 hover:bg-slate-200'
+            ? 'bg-primary-500 text-white' 
+            : 'bg-surface-100 text-surface-600 hover:bg-surface-200'
         ]"
       >
         <span class="w-5 h-5 bg-white/20 rounded-full flex items-center justify-center text-[10px]">
@@ -131,113 +131,102 @@ function isExpanded(projectId: string): boolean {
       </button>
     </div>
 
-    <!-- Summary Stats -->
-    <div class="grid grid-cols-4 gap-4 mb-6">
-      <div class="card p-4">
-        <div class="text-sm text-surface-500 mb-1">Active Projects</div>
-        <div class="text-2xl font-semibold text-surface-900">{{ store.activeProjects.length }}</div>
+    <!-- Summary Stats - 2x2 grid on mobile -->
+    <div class="grid grid-cols-2 md:grid-cols-4 gap-3 mb-6">
+      <div class="card p-3">
+        <div class="text-xs text-surface-500">Active</div>
+        <div class="text-xl font-semibold text-surface-800">{{ store.activeProjects.length }}</div>
       </div>
-      <div class="card p-4">
-        <div class="text-sm text-surface-500 mb-1">Blocked</div>
-        <div class="text-2xl font-semibold" :class="blockedCount > 0 ? 'text-red-600' : 'text-surface-900'">
+      <div class="card p-3">
+        <div class="text-xs text-surface-500">Blocked</div>
+        <div class="text-xl font-semibold" :class="blockedCount > 0 ? 'text-amber-600' : 'text-surface-800'">
           {{ blockedCount }}
         </div>
       </div>
-      <div class="card p-4">
-        <div class="text-sm text-surface-500 mb-1">Needs Review</div>
-        <div class="text-2xl font-semibold" :class="totalUnreviewedNotes > 0 ? 'text-amber-600' : 'text-surface-900'">
+      <div class="card p-3">
+        <div class="text-xs text-surface-500">Needs Review</div>
+        <div class="text-xl font-semibold" :class="totalUnreviewedNotes > 0 ? 'text-amber-600' : 'text-surface-800'">
           {{ totalUnreviewedNotes }}
         </div>
       </div>
-      <div class="card p-4">
-        <div class="text-sm text-surface-500 mb-1">Comparison Date</div>
+      <div class="card p-3">
+        <div class="text-xs text-surface-500">Since</div>
         <input 
           type="date"
           :value="comparisonDate"
           @change="updateComparisonDate"
-          class="input text-sm py-1 mt-1"
+          class="input text-sm py-0.5 px-1 mt-0.5 w-full"
         />
       </div>
     </div>
 
     <!-- Projects List -->
-    <div class="space-y-4">
+    <div class="space-y-3">
       <div 
         v-for="summary in sortedSummaries" 
         :key="summary.project.id"
         class="card overflow-hidden"
       >
-        <!-- Project Header -->
+        <!-- Project Header - stacked layout -->
         <div 
-          class="px-4 py-3 flex items-center gap-4 cursor-pointer hover:bg-surface-50 transition-colors"
+          class="p-4 cursor-pointer hover:bg-surface-50 transition-colors"
           @click="toggleProject(summary.project.id)"
         >
-          <!-- Expand/Collapse Icon -->
-          <svg 
-            :class="[
-              'w-4 h-4 text-surface-400 transition-transform',
-              isExpanded(summary.project.id) ? 'rotate-90' : ''
-            ]"
-            fill="none" 
-            viewBox="0 0 24 24" 
-            stroke="currentColor" 
-            stroke-width="2"
-          >
-            <path stroke-linecap="round" stroke-linejoin="round" d="M9 5l7 7-7 7" />
-          </svg>
-
-          <!-- Project Info -->
-          <div class="flex-1 min-w-0">
-            <div class="flex items-center gap-2">
-              <span class="font-medium text-surface-900">{{ summary.project.name }}</span>
-              <span v-if="summary.hasBlockedTasks" class="badge-danger">Blocked</span>
-              <span v-if="summary.unreviewedNotes > 0" class="badge-warning">
-                {{ summary.unreviewedNotes }} note{{ summary.unreviewedNotes !== 1 ? 's' : '' }}
-              </span>
-              <span v-if="summary.project.status === 'Closed'" class="badge-neutral">Closed</span>
+          <!-- Top row: name + badges -->
+          <div class="flex items-start gap-3">
+            <svg 
+              :class="[
+                'w-4 h-4 text-surface-400 transition-transform mt-1 shrink-0',
+                isExpanded(summary.project.id) ? 'rotate-90' : ''
+              ]"
+              fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"
+            >
+              <path stroke-linecap="round" stroke-linejoin="round" d="M9 5l7 7-7 7" />
+            </svg>
+            
+            <div class="flex-1 min-w-0">
+              <div class="flex items-center gap-2 flex-wrap">
+                <span class="font-medium text-surface-800">{{ summary.project.name }}</span>
+                <span v-if="summary.hasBlockedTasks" class="badge-warning text-xs">Blocked</span>
+                <span v-if="summary.unreviewedNotes > 0" class="badge-warning text-xs">
+                  {{ summary.unreviewedNotes }} note{{ summary.unreviewedNotes !== 1 ? 's' : '' }}
+                </span>
+              </div>
+              <div class="text-xs text-surface-500 mt-1">
+                {{ summary.project.customer }} &bull; WO: {{ summary.project.workOrderId }}
+              </div>
+              
+              <!-- Progress row -->
+              <div class="flex items-center gap-3 mt-3">
+                <div class="flex-1 max-w-[200px]">
+                  <ProgressBar :value="summary.currentProgress" />
+                </div>
+                <span class="text-sm font-medium text-surface-700">
+                  {{ summary.currentProgress }}%
+                </span>
+                <span 
+                  v-if="summary.progressChange > 0"
+                  class="text-sm font-medium text-emerald-600"
+                >
+                  +{{ summary.progressChange }}%
+                </span>
+                <span 
+                  v-else-if="summary.progressChange < 0"
+                  class="text-sm font-medium text-amber-600"
+                >
+                  {{ summary.progressChange }}%
+                </span>
+                <span v-else class="text-sm text-surface-400">--</span>
+              </div>
             </div>
-            <div class="text-xs text-surface-500 mt-0.5">
-              {{ summary.project.customer }} | WO: {{ summary.project.workOrderId }}
-            </div>
-          </div>
 
-          <!-- Progress -->
-          <div class="w-32 flex items-center gap-2">
-            <ProgressBar :value="summary.currentProgress" class="flex-1" />
-            <span class="text-sm font-medium text-surface-700 w-10 text-right">
-              {{ summary.currentProgress }}%
-            </span>
+            <button 
+              @click.stop="navigateToProject(summary.project.id)"
+              class="btn-ghost text-sm px-3 py-1 shrink-0"
+            >
+              View
+            </button>
           </div>
-
-          <!-- Change Indicator -->
-          <div class="w-16 text-right">
-            <span 
-              v-if="summary.progressChange > 0"
-              class="text-sm font-medium text-emerald-600"
-            >
-              +{{ summary.progressChange }}%
-            </span>
-            <span 
-              v-else-if="summary.progressChange < 0"
-              class="text-sm font-medium text-red-600"
-            >
-              {{ summary.progressChange }}%
-            </span>
-            <span 
-              v-else
-              class="text-sm text-surface-400"
-            >
-              --
-            </span>
-          </div>
-
-          <!-- View Project Link -->
-          <button 
-            @click.stop="navigateToProject(summary.project.id)"
-            class="btn-ghost text-sm px-3 py-1"
-          >
-            View
-          </button>
         </div>
 
         <!-- Expanded Content -->

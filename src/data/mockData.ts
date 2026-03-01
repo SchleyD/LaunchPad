@@ -42,6 +42,7 @@ const haasAndSonsTasks: Task[] = [
     title: 'Initial customer kickoff call',
     owner: 'RB',
     status: 'Done',
+    phase: 'Special Proj. Notes',
     milestone: 20,
     category: 'Setup',
     estimatedHours: 1,
@@ -58,6 +59,7 @@ const haasAndSonsTasks: Task[] = [
     title: 'Gather site requirements',
     owner: 'RB',
     status: 'Done',
+    phase: 'Inhouse Planning',
     milestone: 20,
     category: 'Setup',
     estimatedHours: 2,
@@ -75,6 +77,7 @@ const haasAndSonsTasks: Task[] = [
     title: 'Hardware order placed and confirmed',
     owner: 'RB',
     status: 'Done',
+    phase: 'Inhouse-HW/SW',
     milestone: 40,
     category: 'Setup',
     estimatedHours: 1,
@@ -85,12 +88,94 @@ const haasAndSonsTasks: Task[] = [
     createdAt: createDate(30),
     updatedAt: createDate(25)
   },
+  // Parent task: HW Drawings with subtasks
+  {
+    id: 't-hw-drawings',
+    projectId: 'p-1',
+    title: 'HW Drawings',
+    owner: 'KS',
+    status: 'InProgress',
+    phase: 'Inhouse Planning',
+    milestone: 40,
+    category: 'Documentation',
+    estimatedHours: 8,
+    timeEntries: [],
+    comments: [],
+    createdAt: createDate(28),
+    updatedAt: createDate(5)
+  },
+  // Subtasks for HW Drawings
+  {
+    id: 't-hw-sub-1',
+    projectId: 'p-1',
+    parentTaskId: 't-hw-drawings',
+    title: 'Post Drawings',
+    owner: 'KS',
+    status: 'Done',
+    phase: 'Inhouse Planning',
+    milestone: 40,
+    category: 'Documentation',
+    estimatedHours: 2,
+    timeEntries: [],
+    comments: [],
+    createdAt: createDate(28),
+    updatedAt: createDate(20)
+  },
+  {
+    id: 't-hw-sub-2',
+    projectId: 'p-1',
+    parentTaskId: 't-hw-drawings',
+    title: 'Post Location',
+    owner: 'KS',
+    status: 'Done',
+    phase: 'Inhouse Planning',
+    milestone: 40,
+    category: 'Documentation',
+    estimatedHours: 1,
+    timeEntries: [],
+    comments: [],
+    createdAt: createDate(28),
+    updatedAt: createDate(18)
+  },
+  {
+    id: 't-hw-sub-3',
+    projectId: 'p-1',
+    parentTaskId: 't-hw-drawings',
+    title: 'Design Diagram',
+    owner: 'KS',
+    status: 'Done',
+    phase: 'Inhouse Planning',
+    milestone: 40,
+    category: 'Documentation',
+    estimatedHours: 2,
+    timeEntries: [],
+    comments: [],
+    createdAt: createDate(28),
+    updatedAt: createDate(15)
+  },
+  {
+    id: 't-hw-sub-4',
+    projectId: 'p-1',
+    parentTaskId: 't-hw-drawings',
+    title: 'Review Drawings With Electricians',
+    owner: 'KS',
+    status: 'InProgress',
+    phase: 'Inhouse Planning',
+    milestone: 40,
+    category: 'Documentation',
+    estimatedHours: 2,
+    timeEntries: [],
+    comments: [],
+    createdAt: createDate(28),
+    updatedAt: createDate(2)
+  },
   {
     id: 't-4',
     projectId: 'p-1',
     title: 'Database conversion planning',
     owner: 'RB',
     status: 'Done',
+    phase: 'Inhouse-HW/SW',
     milestone: 40,
     category: 'Configuration',
     estimatedHours: 4,
@@ -108,6 +193,7 @@ const haasAndSonsTasks: Task[] = [
     title: 'Software configuration',
     owner: 'RB',
     status: 'InProgress',
+    phase: 'Inhouse-HW/SW',
     milestone: 60,
     category: 'Configuration',
     estimatedHours: 8,
@@ -126,6 +212,7 @@ const haasAndSonsTasks: Task[] = [
     title: 'Hardware staging and testing',
     owner: 'RB',
     status: 'Blocked',
+    phase: 'Inhouse-HW/SW',
     milestone: 60,
     category: 'Installation',
     estimatedHours: 6,
@@ -145,6 +232,7 @@ const haasAndSonsTasks: Task[] = [
     title: 'Onsite installation',
     owner: 'RB',
     status: 'Backlog',
+    phase: 'Shipping/Install',
     milestone: 80,
     category: 'Installation',
     estimatedHours: 16,
@@ -159,6 +247,7 @@ const haasAndSonsTasks: Task[] = [
     title: 'User training session',
     owner: 'RB',
     status: 'Backlog',
+    phase: 'Site-SW',
     milestone: 80,
     category: 'Training',
     estimatedHours: 4,
@@ -174,6 +263,7 @@ const haasAndSonsTasks: Task[] = [
     title: 'Go-live support',
     owner: 'RB',
     status: 'Backlog',
+    phase: 'Go Live-Follow Up',
     milestone: 90,
     category: 'Installation',
     estimatedHours: 8,
@@ -189,6 +279,7 @@ const haasAndSonsTasks: Task[] = [
     title: 'Final documentation handoff',
     owner: 'RB',
     status: 'Backlog',
+    phase: 'Inhouse Documentation',
     milestone: 100,
     category: 'Documentation',
     estimatedHours: 2,
@@ -471,11 +562,12 @@ export const projectTypes: { value: ProjectType; label: string }[] = [
 // Each task is tagged with which project types it applies to
 // Assignee: '[ProjectOwner]' = assigned to project owner, or specific user ID
 export const mockTaskTemplates: TaskTemplate[] = [
-  // ===== 20% MILESTONE - Project Kickoff =====
+  // ===== SPECIAL PROJ. NOTES (20%) =====
   {
     id: 'tmpl-1',
     title: 'Initial customer kickoff call',
     projectTypes: ['SoftwareOnly', 'HardwareOnly', 'HardwareSoftware'],
+    phase: 'Special Proj. Notes',
     milestone: 20,
     category: 'Setup',
     estimatedHours: 1,
@@ -485,14 +577,30 @@ export const mockTaskTemplates: TaskTemplate[] = [
     updatedAt: createDate(100)
   },
   {
+    id: 'tmpl-notes-2',
+    title: 'Review special project requirements',
+    projectTypes: ['SoftwareOnly', 'HardwareOnly', 'HardwareSoftware'],
+    phase: 'Special Proj. Notes',
+    milestone: 20,
+    category: 'Setup',
+    estimatedHours: 1,
+    assignee: '[ProjectOwner]',
+    order: 2,
+    createdAt: createDate(100),
+    updatedAt: createDate(100)
+  },
+
+  // ===== INHOUSE PLANNING (20%) =====
+  {
     id: 'tmpl-2',
     title: 'Gather site requirements',
     projectTypes: ['HardwareOnly', 'HardwareSoftware'],
+    phase: 'Inhouse Planning',
     milestone: 20,
     category: 'Setup',
     estimatedHours: 2,
     assignee: '[ProjectOwner]',
-    order: 2,
+    order: 1,
     createdAt: createDate(100),
     updatedAt: createDate(100)
   },
@@ -500,25 +608,59 @@ export const mockTaskTemplates: TaskTemplate[] = [
     id: 'tmpl-3',
     title: 'Current system analysis',
     projectTypes: ['SoftwareOnly', 'HardwareSoftware'],
+    phase: 'Inhouse Planning',
     milestone: 20,
     category: 'Setup',
     estimatedHours: 3,
     assignee: '[ProjectOwner]',
+    order: 2,
+    createdAt: createDate(100),
+    updatedAt: createDate(100)
+  },
+  {
+    id: 'tmpl-plan-1',
+    title: 'HW Drawings',
+    projectTypes: ['HardwareOnly', 'HardwareSoftware'],
+    phase: 'Inhouse Planning',
+    milestone: 40,
+    category: 'Documentation',
+    estimatedHours: 8,
+    assignee: '[ProjectOwner]',
+    subtasks: [
+      { id: 'st-hw-1', title: 'Post Drawings', estimatedHours: 2, assignee: '[ProjectOwner]', order: 1 },
+      { id: 'st-hw-2', title: 'Post Location', estimatedHours: 1, assignee: '[ProjectOwner]', order: 2 },
+      { id: 'st-hw-3', title: 'Design Diagram', estimatedHours: 2, assignee: '[ProjectOwner]', order: 3 },
+      { id: 'st-hw-4', title: 'Review with Electricians', estimatedHours: 1, assignee: '[ProjectOwner]', order: 4 }
+    ],
     order: 3,
     createdAt: createDate(100),
     updatedAt: createDate(100)
   },
+  {
+    id: 'tmpl-plan-2',
+    title: 'Remote SW Drawings',
+    projectTypes: ['SoftwareOnly', 'HardwareSoftware'],
+    phase: 'Inhouse Planning',
+    milestone: 40,
+    category: 'Documentation',
+    estimatedHours: 4,
+    assignee: '[ProjectOwner]',
+    order: 4,
+    createdAt: createDate(100),
+    updatedAt: createDate(100)
+  },
   
-  // ===== 40% MILESTONE - Order & Planning (Hardware projects) =====
+  // ===== INHOUSE-HW/SW (40%) =====
   {
     id: 'tmpl-4',
     title: 'Hardware order placed and confirmed',
     projectTypes: ['HardwareOnly', 'HardwareSoftware'],
+    phase: 'Inhouse-HW/SW',
     milestone: 40,
     category: 'Setup',
     estimatedHours: 1,
-    assignee: 'jm', // Specific: Josh M. (Admin/Production)
-    departmentId: 'dept-prod', // Production department
+    assignee: 'jm',
+    departmentId: 'dept-prod',
     order: 1,
     createdAt: createDate(100),
     updatedAt: createDate(100)
@@ -527,6 +669,7 @@ export const mockTaskTemplates: TaskTemplate[] = [
     id: 'tmpl-5',
     title: 'Database conversion planning',
     projectTypes: ['SoftwareOnly', 'HardwareSoftware'],
+    phase: 'Inhouse-HW/SW',
     milestone: 40,
     category: 'Configuration',
     estimatedHours: 4,
@@ -535,30 +678,52 @@ export const mockTaskTemplates: TaskTemplate[] = [
     createdAt: createDate(100),
     updatedAt: createDate(100)
   },
+  {
+    id: 'tmpl-hw-1',
+    title: 'Staging/Build HW',
+    projectTypes: ['HardwareOnly', 'HardwareSoftware'],
+    phase: 'Inhouse-HW/SW',
+    milestone: 60,
+    category: 'Installation',
+    estimatedHours: 8,
+    assignee: 'jm',
+    departmentId: 'dept-prod',
+    subtasks: [
+      { id: 'st-stg-1', title: 'Unbox and inventory', estimatedHours: 1, assignee: 'jm', order: 1 },
+      { id: 'st-stg-2', title: 'Assemble components', estimatedHours: 3, assignee: 'jm', order: 2 },
+      { id: 'st-stg-3', title: 'Initial power-on test', estimatedHours: 1, assignee: 'jm', order: 3 },
+      { id: 'st-stg-4', title: 'Configure network settings', estimatedHours: 1, assignee: 'jm', order: 4 }
+    ],
+    order: 3,
+    createdAt: createDate(100),
+    updatedAt: createDate(100)
+  },
+  {
+    id: 'tmpl-hw-2',
+    title: 'QC Testing',
+    projectTypes: ['HardwareOnly', 'HardwareSoftware'],
+    phase: 'Inhouse-HW/SW',
+    milestone: 60,
+    category: 'Testing',
+    estimatedHours: 4,
+    assignee: 'jm',
+    departmentId: 'dept-prod',
+    order: 4,
+    createdAt: createDate(100),
+    updatedAt: createDate(100)
+  },
   
-  // ===== 60% MILESTONE - Build & Configuration =====
+  // ===== INHOUSE DOCUMENTATION (60%) =====
   {
     id: 'tmpl-6',
     title: 'Software configuration',
     projectTypes: ['SoftwareOnly', 'HardwareSoftware'],
+    phase: 'Inhouse Documentation',
     milestone: 60,
     category: 'Configuration',
     estimatedHours: 8,
     assignee: '[ProjectOwner]',
     order: 1,
-    createdAt: createDate(100),
-    updatedAt: createDate(100)
-  },
-  {
-    id: 'tmpl-7',
-    title: 'Hardware staging and testing',
-    projectTypes: ['HardwareOnly', 'HardwareSoftware'],
-    milestone: 60,
-    category: 'Installation',
-    estimatedHours: 6,
-    assignee: 'jm', // Specific: Josh M. (Production)
-    departmentId: 'dept-prod', // Production department
-    order: 2,
     createdAt: createDate(100),
     updatedAt: createDate(100)
   },
@@ -566,36 +731,90 @@ export const mockTaskTemplates: TaskTemplate[] = [
     id: 'tmpl-8',
     title: 'Database migration',
     projectTypes: ['SoftwareOnly', 'HardwareSoftware'],
+    phase: 'Inhouse Documentation',
     milestone: 60,
     category: 'Configuration',
     estimatedHours: 8,
+    assignee: '[ProjectOwner]',
+    order: 2,
+    createdAt: createDate(100),
+    updatedAt: createDate(100)
+  },
+  {
+    id: 'tmpl-doc-1',
+    title: 'Create customer documentation',
+    projectTypes: ['SoftwareOnly', 'HardwareOnly', 'HardwareSoftware'],
+    phase: 'Inhouse Documentation',
+    milestone: 60,
+    category: 'Documentation',
+    estimatedHours: 3,
     assignee: '[ProjectOwner]',
     order: 3,
     createdAt: createDate(100),
     updatedAt: createDate(100)
   },
   
-  // ===== 80% MILESTONE - Installation & Training =====
+  // ===== SITE-HW (80%) =====
   {
     id: 'tmpl-9',
-    title: 'Onsite installation',
+    title: 'Onsite hardware installation',
     projectTypes: ['HardwareOnly', 'HardwareSoftware'],
+    phase: 'Site-HW',
     milestone: 80,
     category: 'Installation',
     estimatedHours: 16,
+    assignee: '[ProjectOwner]',
+    subtasks: [
+      { id: 'st-site-1', title: 'Unload and position equipment', estimatedHours: 2, assignee: '[ProjectOwner]', order: 1 },
+      { id: 'st-site-2', title: 'Electrical connections', estimatedHours: 3, assignee: '[ProjectOwner]', order: 2 },
+      { id: 'st-site-3', title: 'Network/data connections', estimatedHours: 2, assignee: '[ProjectOwner]', order: 3 },
+      { id: 'st-site-4', title: 'Calibration', estimatedHours: 4, assignee: '[ProjectOwner]', order: 4 },
+      { id: 'st-site-5', title: 'Initial testing', estimatedHours: 3, assignee: '[ProjectOwner]', order: 5 }
+    ],
+    order: 1,
+    createdAt: createDate(100),
+    updatedAt: createDate(100)
+  },
+  
+  // ===== SITE-SW (80%) =====
+  {
+    id: 'tmpl-10',
+    title: 'Software installation and configuration',
+    projectTypes: ['SoftwareOnly'],
+    phase: 'Site-SW',
+    milestone: 80,
+    category: 'Installation',
+    estimatedHours: 6,
     assignee: '[ProjectOwner]',
     order: 1,
     createdAt: createDate(100),
     updatedAt: createDate(100)
   },
   {
-    id: 'tmpl-10',
-    title: 'Software installation and configuration',
-    projectTypes: ['SoftwareOnly'],
+    id: 'tmpl-12',
+    title: 'User acceptance testing',
+    projectTypes: ['SoftwareOnly', 'HardwareSoftware'],
+    phase: 'Site-SW',
     milestone: 80,
-    category: 'Installation',
-    estimatedHours: 6,
+    category: 'Testing',
+    estimatedHours: 4,
     assignee: '[ProjectOwner]',
+    order: 2,
+    createdAt: createDate(100),
+    updatedAt: createDate(100)
+  },
+  
+  // ===== SHIPPING/INSTALL (80%) =====
+  {
+    id: 'tmpl-ship-1',
+    title: 'Coordinate shipping',
+    projectTypes: ['HardwareOnly', 'HardwareSoftware'],
+    phase: 'Shipping/Install',
+    milestone: 80,
+    category: 'Setup',
+    estimatedHours: 2,
+    assignee: 'jm',
+    departmentId: 'dept-prod',
     order: 1,
     createdAt: createDate(100),
     updatedAt: createDate(100)
@@ -604,6 +823,7 @@ export const mockTaskTemplates: TaskTemplate[] = [
     id: 'tmpl-11',
     title: 'User training session',
     projectTypes: ['SoftwareOnly', 'HardwareOnly', 'HardwareSoftware'],
+    phase: 'Shipping/Install',
     milestone: 80,
     category: 'Training',
     estimatedHours: 4,
@@ -612,24 +832,13 @@ export const mockTaskTemplates: TaskTemplate[] = [
     createdAt: createDate(100),
     updatedAt: createDate(100)
   },
-  {
-    id: 'tmpl-12',
-    title: 'User acceptance testing',
-    projectTypes: ['SoftwareOnly', 'HardwareSoftware'],
-    milestone: 80,
-    category: 'Testing',
-    estimatedHours: 4,
-    assignee: '[ProjectOwner]',
-    order: 3,
-    createdAt: createDate(100),
-    updatedAt: createDate(100)
-  },
   
-  // ===== 90% MILESTONE - Go-Live =====
+  // ===== GO LIVE-FOLLOW UP (90-100%) =====
   {
     id: 'tmpl-13',
     title: 'Production cutover',
     projectTypes: ['SoftwareOnly', 'HardwareSoftware'],
+    phase: 'Go Live-Follow Up',
     milestone: 90,
     category: 'Installation',
     estimatedHours: 4,
@@ -642,6 +851,7 @@ export const mockTaskTemplates: TaskTemplate[] = [
     id: 'tmpl-14',
     title: 'Go-live support',
     projectTypes: ['SoftwareOnly', 'HardwareOnly', 'HardwareSoftware'],
+    phase: 'Go Live-Follow Up',
     milestone: 90,
     category: 'Installation',
     estimatedHours: 8,
@@ -650,29 +860,55 @@ export const mockTaskTemplates: TaskTemplate[] = [
     createdAt: createDate(100),
     updatedAt: createDate(100)
   },
-  
-  // ===== 100% MILESTONE - Closeout =====
+  {
+    id: 'tmpl-followup-1',
+    title: 'Post go-live check-in (1 week)',
+    projectTypes: ['SoftwareOnly', 'HardwareOnly', 'HardwareSoftware'],
+    phase: 'Go Live-Follow Up',
+    milestone: 100,
+    category: 'Setup',
+    estimatedHours: 1,
+    assignee: '[ProjectOwner]',
+    order: 3,
+    createdAt: createDate(100),
+    updatedAt: createDate(100)
+  },
+  {
+    id: 'tmpl-followup-2',
+    title: 'Punch list items',
+    projectTypes: ['SoftwareOnly', 'HardwareOnly', 'HardwareSoftware'],
+    phase: 'Go Live-Follow Up',
+    milestone: 100,
+    category: 'Punch List',
+    estimatedHours: 4,
+    assignee: '[ProjectOwner]',
+    order: 4,
+    createdAt: createDate(100),
+    updatedAt: createDate(100)
+  },
   {
     id: 'tmpl-15',
     title: 'Final documentation handoff',
     projectTypes: ['SoftwareOnly', 'HardwareOnly', 'HardwareSoftware'],
+    phase: 'Go Live-Follow Up',
     milestone: 100,
     category: 'Documentation',
     estimatedHours: 2,
     assignee: '[ProjectOwner]',
-    order: 1,
+    order: 5,
     createdAt: createDate(100),
     updatedAt: createDate(100)
   },
   {
     id: 'tmpl-16',
-    title: 'Project closeout documentation',
+    title: 'Project closeout',
     projectTypes: ['SoftwareOnly', 'HardwareOnly', 'HardwareSoftware'],
+    phase: 'Go Live-Follow Up',
     milestone: 100,
     category: 'Documentation',
     estimatedHours: 2,
     assignee: '[ProjectOwner]',
-    order: 2,
+    order: 6,
     createdAt: createDate(100),
     updatedAt: createDate(100)
   }

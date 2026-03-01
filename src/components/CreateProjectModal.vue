@@ -102,8 +102,12 @@ function handleClose() {
   emit('close')
 }
 
-function handleSubmit() {
-  if (!isValid.value) return
+const isSubmitting = ref(false)
+
+async function handleSubmit() {
+  if (!isValid.value || isSubmitting.value) return
+  
+  isSubmitting.value = true
   
   // Build quoted hours object (only include non-null values)
   const quotedHoursPayload: QuotedHours = {}
@@ -113,21 +117,27 @@ function handleSubmit() {
     }
   }
   
-  const projectId = store.createProjectFromTemplate({
-    name: formData.value.name,
-    customer: formData.value.customer,
-    workOrderId: formData.value.workOrderId,
-    orderDate: new Date(formData.value.orderDate),
-    projectType: formData.value.projectType,
-    leadTimeType: getLeadTimeType(formData.value.projectType),
-    owner: formData.value.owner,
-    reseller: formData.value.reseller || undefined,
-    scaleDealer: formData.value.scaleDealer || undefined,
-    quotedHours: quotedHoursPayload
-  })
-  
-  emit('created', projectId)
-  handleClose()
+  try {
+    const projectId = await store.createProjectFromTemplate({
+      name: formData.value.name,
+      customer: formData.value.customer,
+      workOrderId: formData.value.workOrderId,
+      orderDate: new Date(formData.value.orderDate),
+      projectType: formData.value.projectType,
+      leadTimeType: getLeadTimeType(formData.value.projectType),
+      owner: formData.value.owner,
+      reseller: formData.value.reseller || undefined,
+      scaleDealer: formData.value.scaleDealer || undefined,
+      quotedHours: quotedHoursPayload
+    })
+    
+    emit('created', projectId)
+    handleClose()
+  } catch (error) {
+    console.error('[v0] Error creating project:', error)
+  } finally {
+    isSubmitting.value = false
+  }
 }
 
 // Reset form when modal opens
@@ -328,9 +338,9 @@ watch(() => props.open, (isOpen) => {
           <button 
             @click="handleSubmit"
             class="btn-primary"
-            :disabled="!isValid"
+            :disabled="!isValid || isSubmitting"
           >
-            Create Project
+            {{ isSubmitting ? 'Creating...' : 'Create Project' }}
           </button>
         </div>
       </div>

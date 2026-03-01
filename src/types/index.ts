@@ -21,6 +21,39 @@ export type TaskCategory =
   | 'Documentation'
   | 'Punch List'
 
+// Task phases based on project workflow (from ClickUp structure)
+export type TaskPhase = 
+  | 'Special Proj. Notes'
+  | 'Inhouse Planning'
+  | 'Inhouse-HW/SW'
+  | 'Inhouse Documentation'
+  | 'Site-HW'
+  | 'Site-SW'
+  | 'Shipping/Install'
+  | 'Go Live-Follow Up'
+
+export const TASK_PHASES: TaskPhase[] = [
+  'Special Proj. Notes',
+  'Inhouse Planning',
+  'Inhouse-HW/SW',
+  'Inhouse Documentation',
+  'Site-HW',
+  'Site-SW',
+  'Shipping/Install',
+  'Go Live-Follow Up'
+]
+
+export const PHASE_COLORS: Record<TaskPhase, string> = {
+  'Special Proj. Notes': 'bg-red-500',
+  'Inhouse Planning': 'bg-cyan-600',
+  'Inhouse-HW/SW': 'bg-cyan-700',
+  'Inhouse Documentation': 'bg-cyan-600',
+  'Site-HW': 'bg-teal-600',
+  'Site-SW': 'bg-teal-600',
+  'Shipping/Install': 'bg-amber-500',
+  'Go Live-Follow Up': 'bg-green-500'
+}
+
 export interface TimeEntry {
   id: string
   duration: number // hours
@@ -40,15 +73,18 @@ export interface Comment {
 export interface Task {
   id: string
   projectId: string
+  parentTaskId?: string // If set, this is a subtask
   title: string
   owner: string
   departmentId?: string // Optional department assignment
   status: TaskStatus
+  phase?: TaskPhase // Project phase this task belongs to
   milestone: number // 20, 40, 60, 80, 90, 100
   category: TaskCategory
   estimatedHours: number
   timeEntries: TimeEntry[]
   comments: Comment[]
+  subtasks?: Task[] // Populated client-side for nested display
   createdAt: Date
   updatedAt: Date
 }
@@ -128,15 +164,25 @@ export type TemplateAssignee = '[ProjectOwner]' | string
 // Department assignment can be a department ID or '[ProjectOwner]' for dynamic assignment
 export type TemplateDepartment = string | null
 
+export interface SubtaskTemplate {
+  id: string
+  title: string
+  estimatedHours: number
+  assignee: TemplateAssignee
+  order: number
+}
+
 export interface TaskTemplate {
   id: string
   title: string
   projectTypes: ProjectType[] // Which project types this task applies to
+  phase?: TaskPhase // Project phase this task belongs to
   milestone: number // 20, 40, 60, 80, 90, 100
   category: TaskCategory
   estimatedHours: number
   assignee: TemplateAssignee // '[ProjectOwner]' or specific user ID like 'rb'
   departmentId?: TemplateDepartment // Optional department assignment for template
+  subtasks?: SubtaskTemplate[] // Subtask templates
   order: number // For sorting within milestone
   createdAt: Date
   updatedAt: Date

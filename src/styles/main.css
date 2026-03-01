@@ -4,8 +4,14 @@
 
 @layer base {
   :root {
-    --color-primary: 20 110 180;
-    --color-accent: 212 160 18;
+    /* Launchpad Brand Kit v1 */
+    --color-primary: 18 63 109;       /* #123F6D AWS Deep Blue */
+    --color-primary-hover: 15 50 88;  /* #0F3258 Hover Blue */
+    --color-accent: 242 183 5;        /* #F2B705 AWS Yellow */
+    --color-text-dark: 31 41 51;      /* #1F2933 Dark Text */
+    --color-text-mid: 107 114 128;    /* #6B7280 Mid Gray */
+    --color-border: 229 231 235;      /* #E5E7EB Border Gray */
+    --color-background: 248 250 252;  /* #F8FAFC Background */
   }
 
   html {
@@ -15,7 +21,7 @@
   }
 
   body {
-    @apply bg-surface-50 text-surface-900;
+    @apply bg-surface-50 text-surface-800;
   }
 }
 
@@ -61,24 +67,34 @@
     @apply inline-flex items-center px-2 py-0.5 text-xs font-medium rounded-full;
   }
 
+  /* Status badges - muted enterprise colors per brand kit */
   .badge-primary {
-    @apply badge bg-primary-100 text-primary-700;
+    @apply badge bg-primary-50 text-primary-500;
   }
 
   .badge-success {
-    @apply badge bg-emerald-100 text-emerald-700;
+    /* Neutral green, not neon - for Complete status */
+    @apply badge bg-emerald-50 text-emerald-600;
   }
 
   .badge-warning {
-    @apply badge bg-amber-100 text-amber-700;
+    /* Muted amber - for Blocked status */
+    @apply badge bg-amber-50 text-amber-600;
   }
 
   .badge-danger {
-    @apply badge bg-red-100 text-red-700;
+    /* Muted red - destructive actions only */
+    @apply badge bg-red-50 text-red-600;
   }
 
   .badge-neutral {
-    @apply badge bg-surface-100 text-surface-600;
+    /* Gray - for Backlog status */
+    @apply badge bg-surface-100 text-surface-500;
+  }
+  
+  .badge-ready {
+    /* Subtle blue accent - for Ready status */
+    @apply badge bg-primary-50 text-primary-500;
   }
 
   .progress-bar {

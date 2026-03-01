@@ -15,11 +15,154 @@ export const useProjectStore = defineStore('projects', () => {
   const projects = ref<Project[]>(mockProjects)
   const taskTemplates = ref<TaskTemplate[]>(mockTaskTemplates)
   const lastReviewDate = ref<Date>(new Date(Date.now() - 7 * 24 * 60 * 60 * 1000)) // 7 days ago
+  const isLoading = ref(false)
+  const hasLoadedFromDb = ref(false)
+
+  // Load projects from Supabase
+  async function loadProjects() {
+    if (!supabase || hasLoadedFromDb.value) return
+    
+    isLoading.value = true
+    try {
+      // Load projects
+      const { data: projectRows, error: projectError } = await supabase
+        .from('projects')
+        .select('*')
+        .order('created_at', { ascending: false })
+
+      if (projectError) {
+        console.error('[v0] Error loading projects:', projectError)
+        return
+      }
+
+      if (!projectRows || projectRows.length === 0) {
+        hasLoadedFromDb.value = true
+        return
+      }
+
+      // Load tasks for all projects
+      const projectIds = projectRows.map(p => p.id)
+      const { data: taskRows, error: taskError } = await supabase
+        .from('tasks')
+        .select('*')
+        .in('project_id', projectIds)
+
+      if (taskError) {
+        console.error('[v0] Error loading tasks:', taskError)
+      }
+
+      // Convert database rows to Project objects
+      const dbProjects: Project[] = projectRows.map(row => {
+        const projectTasks = (taskRows || [])
+          .filter(t => t.project_id === row.id)
+          .map(t => ({
+            id: t.id,
+            projectId: t.project_id,
+            parentTaskId: t.parent_task_id || undefined,
+            title: t.title,
+            owner: t.owner || 'TBD',
+            status: t.status as TaskStatus,
+            phase: t.phase || undefined,
+            milestone: t.milestone,
+            category: t.category,
+            estimatedHours: t.estimated_hours,
+            timeEntries: [],
+            comments: [],
+            createdAt: new Date(t.created_at),
+            updatedAt: new Date(t.updated_at)
+          }))
+
+        return {
+          id: row.id,
+          name: row.name,
+          customer: row.customer,
+          workOrderId: row.work_order_id,
+          orderDate: new Date(row.order_date),
+          leadTimeType: row.lead_time_type || 'Standard',
+          reseller: row.reseller || undefined,
+          scaleDealer: row.scale_dealer || undefined,
+          owner: row.owner || 'TBD',
+          contributors: [],
+          status: row.status,
+          blocked: row.blocked || false,
+          type: row.project_type === 'SoftwareOnly' ? 'SoftwareOnly' : 'Hardware',
+          quotedHours: row.quoted_hours || {},
+          tasks: projectTasks,
+          reviewNotes: [],
+          createdAt: new Date(row.created_at),
+          updatedAt: new Date(row.updated_at)
+        }
+      })
+
+      // Merge with mock data (keep mock data for demo, add db projects)
+      const existingIds = new Set(projects.value.map(p => p.id))
+      dbProjects.forEach(p => {
+        if (!existingIds.has(p.id)) {
+          projects.value.push(p)
+        }
+      })
+
+      hasLoadedFromDb.value = true
+    } catch (err) {
+      console.error('[v0] Error in loadProjects:', err)
+    } finally {
+      isLoading.value = false
+    }
+  }
+
+  // Auto-load on store creation
+  loadProjects()
 
   // Getters
   const activeProjects = computed(() => 
     projects.value.filter(p => p.status === 'Open')
   )
+
+  // Get historical stats for task estimation
+  function getTaskHistoricalStats(taskTitle: string, category?: string): { 
+    avgActualHours: number | null, 
+    taskCount: number,
+    minHours: number | null,
+    maxHours: number | null 
+  } {
+    // Find all completed tasks matching title or category
+    const completedTasks: Task[] = []
+    
+    projects.value.forEach(project => {
+      project.tasks.forEach(task => {
+        if (task.status !== 'Done') return
+        if (task.timeEntries.length === 0) return // No actual time logged
+        
+        // Match by title (fuzzy) or exact category
+        const titleMatch = task.title.toLowerCase().includes(taskTitle.toLowerCase()) ||
+                          taskTitle.toLowerCase().includes(task.title.toLowerCase())
+        const categoryMatch = category && task.category === category
+        
+        if (titleMatch || categoryMatch) {
+          completedTasks.push(task)
+        }
+      })
+    })
+
+    if (completedTasks.length === 0) {
+      return { avgActualHours: null, taskCount: 0, minHours: null, maxHours: null }
+    }
+
+    // Calculate actual hours for each task
+    const actualHours = completedTasks.map(task => 
+      task.timeEntries.reduce((sum, entry) => sum + entry.duration, 0)
+    )
+
+    const total = actualHours.reduce((sum, h) => sum + h, 0)
+    const avg = total / actualHours.length
+
+    return {
+      avgActualHours: Math.round(avg * 10) / 10, // Round to 1 decimal
+      taskCount: completedTasks.length,
+      minHours: Math.min(...actualHours),
+      maxHours: Math.max(...actualHours)
+    }
+  }
 
   const closedProjects = computed(() => 
     projects.value.filter(p => p.status === 'Closed')
@@ -363,26 +506,41 @@ export const useProjectStore = defineStore('projects', () => {
     }
   }
 
+  // Generate UUID
+  function generateUUID(): string {
+    return 'xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx'.replace(/[xy]/g, function(c) {
+      const r = Math.random() * 16 | 0
+      const v = c === 'x' ? r : (r & 0x3 | 0x8)
+      return v.toString(16)
+    })
+  }
+
   // Project Creation from Template
-  function createProjectFromTemplate(payload: ProjectCreatePayload): string {
-    const projectId = `p-${Date.now()}`
+  async function createProjectFromTemplate(payload: ProjectCreatePayload): Promise<string> {
+    const projectId = generateUUID()
     
     // Get templates for this project type
     const templates = getTemplatesForProjectType(payload.projectType)
     
-    // Create tasks from templates
-    const tasks: Task[] = templates.map((template, index) => {
+    // Create tasks from templates (including subtasks)
+    const tasks: Task[] = []
+    
+    templates.forEach((template) => {
       // Determine assignee: '[ProjectOwner]' maps to project owner, otherwise use specific assignee
       const assignee = template.assignee === '[ProjectOwner]' 
         ? payload.owner.toUpperCase() 
         : template.assignee.toUpperCase()
 
-      return {
-        id: `t-${Date.now()}-${index}`,
+      const parentTaskId = generateUUID()
+
+      // Create parent task
+      const parentTask: Task = {
+        id: parentTaskId,
         projectId,
         title: template.title,
         owner: assignee,
         status: 'Backlog' as TaskStatus,
+        phase: template.phase,
         milestone: template.milestone,
         category: template.category,
         estimatedHours: template.estimatedHours,
@@ -390,6 +548,34 @@ export const useProjectStore = defineStore('projects', () => {
         comments: [],
         createdAt: new Date(),
         updatedAt: new Date()
+      }
+      tasks.push(parentTask)
+
+      // Create subtasks if template has them
+      if (template.subtasks?.length) {
+        template.subtasks.forEach((subtaskTemplate) => {
+          const subtaskAssignee = subtaskTemplate.assignee === '[ProjectOwner]' 
+            ? payload.owner.toUpperCase() 
+            : subtaskTemplate.assignee.toUpperCase()
+
+          const subtask: Task = {
+            id: generateUUID(),
+            projectId,
+            parentTaskId,
+            title: subtaskTemplate.title,
+            owner: subtaskAssignee,
+            status: 'Backlog' as TaskStatus,
+            phase: template.phase, // Inherit phase from parent
+            milestone: template.milestone, // Inherit milestone from parent
+            category: template.category, // Inherit category from parent
+            estimatedHours: subtaskTemplate.estimatedHours,
+            timeEntries: [],
+            comments: [],
+            createdAt: new Date(),
+            updatedAt: new Date()
+          }
+          tasks.push(subtask)
+        })
       }
     })
 
@@ -421,6 +607,58 @@ export const useProjectStore = defineStore('projects', () => {
       updatedAt: new Date()
     }
 
+    // Save to Supabase if available
+    if (supabase) {
+      try {
+        // Insert project
+        const { error: projectError } = await supabase
+          .from('projects')
+          .insert({
+            id: projectId,
+            name: payload.name,
+            customer: payload.customer,
+            work_order_id: payload.workOrderId,
+            order_date: payload.orderDate.toISOString().split('T')[0],
+            project_type: payload.projectType,
+            owner: payload.owner.toUpperCase(),
+            reseller: payload.reseller || null,
+            scale_dealer: payload.scaleDealer || null,
+            status: 'Open',
+            blocked: false,
+            quoted_hours: payload.quotedHours || {}
+          })
+        
+        if (projectError) {
+          console.error('[v0] Error saving project:', projectError)
+        }
+
+        // Insert tasks
+        const taskInserts = tasks.map(task => ({
+          id: task.id,
+          project_id: projectId,
+          parent_task_id: task.parentTaskId || null,
+          title: task.title,
+          owner: task.owner,
+          status: task.status,
+          phase: task.phase || null,
+          milestone: task.milestone,
+          category: task.category,
+          estimated_hours: task.estimatedHours
+        }))
+
+        const { error: tasksError } = await supabase
+          .from('tasks')
+          .insert(taskInserts)
+
+        if (tasksError) {
+          console.error('[v0] Error saving tasks:', tasksError)
+        }
+      } catch (err) {
+        console.error('[v0] Supabase error:', err)
+      }
+    }
+
+    // Add to local store
     projects.value.push(newProject)
     return projectId
   }
@@ -430,6 +668,10 @@ export const useProjectStore = defineStore('projects', () => {
     projects,
     taskTemplates,
     lastReviewDate,
+    isLoading,
+    
+    // Data loading
+    loadProjects,
     
     // Getters
     activeProjects,
@@ -461,5 +703,8 @@ export const useProjectStore = defineStore('projects', () => {
     updateTaskTemplate,
     deleteTaskTemplate,
     createProjectFromTemplate,
+    
+    // Estimation helpers
+    getTaskHistoricalStats,
   }
 })
