@@ -1,4 +1,4 @@
-import type { Project, Task, User, ReviewNote, TaskTemplate, ProjectType, Department } from '@/types'
+import type { Project, Task, User, ReviewNote, TaskTemplate, ProjectTemplate, ProjectType, Department } from '@/types'
 
 // Departments
 export const mockDepartments: Department[] = [
@@ -909,6 +909,58 @@ export const mockTaskTemplates: TaskTemplate[] = [
     estimatedHours: 2,
     assignee: '[ProjectOwner]',
     order: 6,
+    createdAt: createDate(100),
+    updatedAt: createDate(100)
+  }
+]
+
+// ===== PROJECT TEMPLATES =====
+// Named collections of tasks for different project types
+// Helper to convert old task templates to new format
+const convertTaskTemplate = (t: TaskTemplate) => ({
+  id: t.id,
+  title: t.title,
+  phase: t.phase,
+  milestone: t.milestone,
+  category: t.category,
+  estimatedHours: t.estimatedHours,
+  assignee: t.assignee,
+  departmentId: t.departmentId,
+  subtasks: t.subtasks,
+  order: t.order
+})
+
+export const mockProjectTemplates: ProjectTemplate[] = [
+  {
+    id: 'pt-software-only',
+    name: 'Software Only',
+    description: 'Standard template for software-only projects including remote installation and configuration',
+    projectType: 'SoftwareOnly',
+    tasks: mockTaskTemplates
+      .filter(t => t.projectTypes.includes('SoftwareOnly'))
+      .map(convertTaskTemplate),
+    createdAt: createDate(100),
+    updatedAt: createDate(100)
+  },
+  {
+    id: 'pt-hardware-only',
+    name: 'Hardware Only',
+    description: 'Standard template for hardware-only installations',
+    projectType: 'HardwareOnly',
+    tasks: mockTaskTemplates
+      .filter(t => t.projectTypes.includes('HardwareOnly'))
+      .map(convertTaskTemplate),
+    createdAt: createDate(100),
+    updatedAt: createDate(100)
+  },
+  {
+    id: 'pt-hardware-software',
+    name: 'Full Hardware + Software',
+    description: 'Complete installation including hardware setup and software configuration',
+    projectType: 'HardwareSoftware',
+    tasks: mockTaskTemplates
+      .filter(t => t.projectTypes.includes('HardwareSoftware'))
+      .map(convertTaskTemplate),
     createdAt: createDate(100),
     updatedAt: createDate(100)
   }

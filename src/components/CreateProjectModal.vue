@@ -24,7 +24,19 @@ const formData = ref({
   projectType: 'HardwareSoftware' as ProjectType,
   owner: '',
   reseller: '',
-  scaleDealer: ''
+  scaleDealer: '',
+  templateId: '' as string // Empty = blank project, or template ID
+})
+
+// Available templates for current project type
+const availableTemplates = computed(() => {
+  return store.projectTemplates.filter(t => t.projectType === formData.value.projectType)
+})
+
+// Auto-select matching template when project type changes
+watch(() => formData.value.projectType, (newType) => {
+  const matchingTemplate = store.projectTemplates.find(t => t.projectType === newType)
+  formData.value.templateId = matchingTemplate?.id || ''
 })
 
 // Quoted hours per category
@@ -47,9 +59,14 @@ const isValid = computed(() => {
     formData.value.owner !== ''
 })
 
-// Get tasks that will be created based on project type
+// Get tasks that will be created based on selected template
+const selectedTemplate = computed(() => {
+  if (!formData.value.templateId) return null
+  return store.projectTemplates.find(t => t.id === formData.value.templateId)
+})
+
 const previewTasks = computed(() => {
-  return store.getTemplatesForProjectType(formData.value.projectType)
+  return selectedTemplate.value?.tasks || []
 })
 
 const taskCountByMilestone = computed(() => {
@@ -84,7 +101,8 @@ function resetForm() {
     projectType: 'HardwareSoftware',
     owner: '',
     reseller: '',
-    scaleDealer: ''
+    scaleDealer: '',
+    templateId: store.projectTemplates.find(t => t.projectType === 'HardwareSoftware')?.id || ''
   }
   quotedHours.value = {
     'PM Time': null,
@@ -128,7 +146,8 @@ async function handleSubmit() {
       owner: formData.value.owner,
       reseller: formData.value.reseller || undefined,
       scaleDealer: formData.value.scaleDealer || undefined,
-      quotedHours: quotedHoursPayload
+      quotedHours: quotedHoursPayload,
+      templateId: formData.value.templateId || undefined
     })
     
     emit('created', projectId)
@@ -180,7 +199,7 @@ watch(() => props.open, (isOpen) => {
           <div class="space-y-4">
             <!-- Project Type Selection -->
             <div>
-              <label class="block text-sm font-medium text-slate-700 mb-2">Project Type</label>
+              <label class="block text-sm font-medium text-surface-700 mb-2">Project Type</label>
               <div class="grid grid-cols-3 gap-3">
                 <button
                   v-for="pt in projectTypes"
@@ -189,11 +208,54 @@ watch(() => props.open, (isOpen) => {
                   :class="[
                     'px-4 py-3 rounded-lg border-2 text-sm font-medium transition-all text-center',
                     formData.projectType === pt.value
-                      ? 'border-blue-500 bg-blue-50 text-blue-700'
-                      : 'border-slate-200 bg-white text-slate-600 hover:border-slate-300'
+                      ? 'border-primary-500 bg-primary-50 text-primary-700'
+                      : 'border-surface-200 bg-white text-surface-600 hover:border-surface-300'
                   ]"
                 >
                   {{ pt.label }}
+                </button>
+              </div>
+            </div>
+
+            <!-- Template Selection -->
+            <div>
+              <label class="block text-sm font-medium text-surface-700 mb-2">Template</label>
+              <div class="space-y-2">
+                <!-- Blank Project Option -->
+                <button
+                  @click="formData.templateId = ''"
+                  :class="[
+                    'w-full px-4 py-3 rounded-lg border-2 text-left transition-all',
+                    formData.templateId === ''
+                      ? 'border-primary-500 bg-primary-50'
+                      : 'border-surface-200 bg-white hover:border-surface-300'
+                  ]"
+                >
+                  <div class="font-medium text-surface-800">Start Blank</div>
+                  <div class="text-xs text-surface-500 mt-0.5">Create project without pre-defined tasks</div>
+                </button>
+                
+                <!-- Template Options -->
+                <button
+                  v-for="template in availableTemplates"
+                  :key="template.id"
+                  @click="formData.templateId = template.id"
+                  :class="[
+                    'w-full px-4 py-3 rounded-lg border-2 text-left transition-all',
+                    formData.templateId === template.id
+                      ? 'border-primary-500 bg-primary-50'
+                      : 'border-surface-200 bg-white hover:border-surface-300'
+                  ]"
+                >
+                  <div class="flex items-center justify-between">
+                    <div class="font-medium text-surface-800">{{ template.name }}</div>
+                    <span class="text-xs bg-surface-100 text-surface-600 px-2 py-0.5 rounded">
+                      {{ template.tasks.length }} tasks
+                    </span>
+                  </div>
+                  <div v-if="template.description" class="text-xs text-surface-500 mt-0.5">
+                    {{ template.description }}
+                  </div>
                 </button>
               </div>
             </div>
@@ -304,27 +366,35 @@ watch(() => props.open, (isOpen) => {
             </div>
 
             <!-- Task Preview -->
-            <div class="mt-6 pt-4 border-t border-slate-200">
-              <h3 class="text-sm font-medium text-slate-700 mb-3">
-                Tasks to be created ({{ previewTasks.length }} tasks)
+            <div class="mt-6 pt-4 border-t border-surface-200">
+              <h3 class="text-sm font-medium text-surface-700 mb-3">
+                {{ formData.templateId ? `Tasks to be created (${previewTasks.length} tasks)` : 'Blank Project' }}
               </h3>
-              <div class="bg-slate-50 rounded-lg p-4">
-                <div class="grid grid-cols-3 gap-4 text-center">
+              
+              <!-- Template selected - show task breakdown -->
+              <div v-if="formData.templateId && previewTasks.length > 0" class="bg-surface-50 rounded-lg p-4">
+                <div class="grid grid-cols-6 gap-2 text-center">
                   <div v-for="milestone in [20, 40, 60, 80, 90, 100]" :key="milestone">
-                    <div class="text-2xl font-semibold text-slate-900">
+                    <div class="text-xl font-semibold text-surface-800">
                       {{ taskCountByMilestone[milestone] || 0 }}
                     </div>
-                    <div class="text-xs text-slate-500">{{ milestone }}%</div>
+                    <div class="text-xs text-surface-500">{{ milestone }}%</div>
                   </div>
                 </div>
                 
-                <div v-if="formData.owner" class="mt-4 pt-3 border-t border-slate-200">
-                  <p class="text-xs text-slate-600">
-                    Tasks marked <span class="font-medium text-blue-600">"Project Owner"</span> will be assigned to 
+                <div v-if="formData.owner" class="mt-4 pt-3 border-t border-surface-200">
+                  <p class="text-xs text-surface-600">
+                    Tasks marked <span class="font-medium text-primary-600">"Project Owner"</span> will be assigned to 
                     <span class="font-medium">{{ getOwnerName(formData.owner) }}</span>.
-                    Tasks with specific assignees will keep their assigned person.
                   </p>
                 </div>
+              </div>
+              
+              <!-- Blank project selected -->
+              <div v-else class="bg-surface-50 rounded-lg p-4 text-center">
+                <p class="text-sm text-surface-600">
+                  Project will be created with no tasks. You can add tasks manually after creation.
+                </p>
               </div>
             </div>
           </div>

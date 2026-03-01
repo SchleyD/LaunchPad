@@ -1,8 +1,8 @@
 import { defineStore } from 'pinia'
 import { ref, computed } from 'vue'
-import type { Project, Task, TaskStatus, TimeEntry, TimeCategory, ReviewNote, ProjectChangeSummary, TaskTemplate, ProjectType, ProjectCreatePayload } from '@/types'
+import type { Project, Task, TaskStatus, TimeEntry, TimeCategory, ReviewNote, ProjectChangeSummary, TaskTemplate, ProjectTemplate, ProjectType, ProjectCreatePayload } from '@/types'
 import { DEFAULT_PHASES } from '@/types'
-import { mockProjects, mockTaskTemplates } from '@/data/mockData'
+import { mockProjects, mockTaskTemplates, mockProjectTemplates } from '@/data/mockData'
 import { useAuthStore } from './auth'
 import { createClient } from '@supabase/supabase-js'
 
@@ -14,7 +14,8 @@ const supabase = supabaseUrl && supabaseAnonKey ? createClient(supabaseUrl, supa
 export const useProjectStore = defineStore('projects', () => {
   // State
   const projects = ref<Project[]>(mockProjects)
-  const taskTemplates = ref<TaskTemplate[]>(mockTaskTemplates)
+  const taskTemplates = ref<TaskTemplate[]>(mockTaskTemplates) // Legacy - kept for backwards compatibility
+  const projectTemplates = ref<ProjectTemplate[]>(mockProjectTemplates)
   const phases = ref<string[]>([...DEFAULT_PHASES])
   const lastReviewDate = ref<Date>(new Date(Date.now() - 7 * 24 * 60 * 60 * 1000)) // 7 days ago
   const isLoading = ref(false)
@@ -685,69 +686,74 @@ export const useProjectStore = defineStore('projects', () => {
     })
   }
 
-  // Project Creation from Template
+  // Project Creation - with or without template
   async function createProjectFromTemplate(payload: ProjectCreatePayload): Promise<string> {
     const projectId = generateUUID()
     
-    // Get templates for this project type
-    const templates = getTemplatesForProjectType(payload.projectType)
-    
-    // Create tasks from templates (including subtasks)
+    // Create tasks from template if one is specified, otherwise start blank
     const tasks: Task[] = []
     
-    templates.forEach((template) => {
-      // Determine assignee: '[ProjectOwner]' maps to project owner, otherwise use specific assignee
-      const assignee = template.assignee === '[ProjectOwner]' 
-        ? payload.owner.toUpperCase() 
-        : template.assignee.toUpperCase()
-
-      const parentTaskId = generateUUID()
-
-      // Create parent task
-      const parentTask: Task = {
-        id: parentTaskId,
-        projectId,
-        title: template.title,
-        owner: assignee,
-        status: 'Backlog' as TaskStatus,
-        phase: template.phase,
-        milestone: template.milestone,
-        category: template.category,
-        estimatedHours: template.estimatedHours,
-        timeEntries: [],
-        comments: [],
-        createdAt: new Date(),
-        updatedAt: new Date()
-      }
-      tasks.push(parentTask)
-
-      // Create subtasks if template has them
-      if (template.subtasks?.length) {
-        template.subtasks.forEach((subtaskTemplate) => {
-          const subtaskAssignee = subtaskTemplate.assignee === '[ProjectOwner]' 
+    if (payload.templateId) {
+      // Find the selected project template
+      const template = projectTemplates.value.find(t => t.id === payload.templateId)
+      
+      if (template) {
+        template.tasks.forEach((templateTask) => {
+          // Determine assignee: '[ProjectOwner]' maps to project owner, otherwise use specific assignee
+          const assignee = templateTask.assignee === '[ProjectOwner]' 
             ? payload.owner.toUpperCase() 
-            : subtaskTemplate.assignee.toUpperCase()
+            : templateTask.assignee.toUpperCase()
 
-          const subtask: Task = {
-            id: generateUUID(),
+          const parentTaskId = generateUUID()
+
+          // Create parent task
+          const parentTask: Task = {
+            id: parentTaskId,
             projectId,
-            parentTaskId,
-            title: subtaskTemplate.title,
-            owner: subtaskAssignee,
+            title: templateTask.title,
+            owner: assignee,
             status: 'Backlog' as TaskStatus,
-            phase: template.phase, // Inherit phase from parent
-            milestone: template.milestone, // Inherit milestone from parent
-            category: template.category, // Inherit category from parent
-            estimatedHours: subtaskTemplate.estimatedHours,
+            phase: templateTask.phase,
+            milestone: templateTask.milestone,
+            category: templateTask.category,
+            estimatedHours: templateTask.estimatedHours,
             timeEntries: [],
             comments: [],
             createdAt: new Date(),
             updatedAt: new Date()
           }
-          tasks.push(subtask)
+          tasks.push(parentTask)
+
+          // Create subtasks if template has them
+          if (templateTask.subtasks?.length) {
+            templateTask.subtasks.forEach((subtaskTemplate) => {
+              const subtaskAssignee = subtaskTemplate.assignee === '[ProjectOwner]' 
+                ? payload.owner.toUpperCase() 
+                : subtaskTemplate.assignee.toUpperCase()
+
+              const subtask: Task = {
+                id: generateUUID(),
+                projectId,
+                parentTaskId,
+                title: subtaskTemplate.title,
+                owner: subtaskAssignee,
+                status: 'Backlog' as TaskStatus,
+                phase: templateTask.phase, // Inherit phase from parent
+                milestone: templateTask.milestone, // Inherit milestone from parent
+                category: templateTask.category, // Inherit category from parent
+                estimatedHours: subtaskTemplate.estimatedHours,
+                timeEntries: [],
+                comments: [],
+                createdAt: new Date(),
+                updatedAt: new Date()
+              }
+              tasks.push(subtask)
+            })
+          }
         })
       }
-    })
+    }
+    // If no templateId or template not found, tasks array stays empty (blank project)
 
     // Determine project type for progress calculation
     const projectTypeMap: Record<ProjectType, 'Hardware' | 'SoftwareOnly'> = {
@@ -836,7 +842,8 @@ export const useProjectStore = defineStore('projects', () => {
   return {
     // State
     projects,
-    taskTemplates,
+    taskTemplates, // Legacy
+    projectTemplates,
     phases,
     lastReviewDate,
     isLoading,

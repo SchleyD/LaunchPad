@@ -157,6 +157,32 @@ export interface SubtaskTemplate {
   order: number
 }
 
+// A task definition within a template
+export interface TemplateTask {
+  id: string
+  title: string
+  phase?: TaskPhase
+  milestone: number // 20, 40, 60, 80, 90, 100
+  category: TaskCategory
+  estimatedHours: number
+  assignee: TemplateAssignee // '[ProjectOwner]' or specific user ID
+  departmentId?: TemplateDepartment
+  subtasks?: SubtaskTemplate[]
+  order: number
+}
+
+// A project template - a named collection of tasks
+export interface ProjectTemplate {
+  id: string
+  name: string // e.g., "Standard Hardware Install", "Software Only", "Full HW+SW"
+  description?: string
+  projectType: ProjectType // Which project type this template is for
+  tasks: TemplateTask[]
+  createdAt: Date
+  updatedAt: Date
+}
+
+// Legacy TaskTemplate for backwards compatibility during migration
 export interface TaskTemplate {
   id: string
   title: string
@@ -184,4 +210,5 @@ export interface ProjectCreatePayload {
   reseller?: string
   scaleDealer?: string
   quotedHours?: QuotedHours
+  templateId?: string // Optional - if provided, use this template; if not, start blank
 }

@@ -262,9 +262,9 @@ function toggleProjectType(type: ProjectType) {
   <div class="p-6 max-w-6xl mx-auto">
     <div class="flex items-center justify-between mb-6">
       <div>
-        <h1 class="text-2xl font-semibold text-slate-900">Task Templates</h1>
-        <p class="text-sm text-slate-500 mt-1">
-          Master task library for project creation. Tasks are filtered by project type.
+        <h1 class="text-2xl font-semibold text-surface-800">Templates</h1>
+        <p class="text-sm text-surface-500 mt-1">
+          Manage project templates. Each template is a collection of tasks used when creating a project.
         </p>
       </div>
       <button 
