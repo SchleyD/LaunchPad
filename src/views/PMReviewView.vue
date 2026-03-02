@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { ref, computed } from 'vue'
+import { ref, computed, watch } from 'vue'
 import { useRouter } from 'vue-router'
 import { useProjectStore } from '@/stores/projects'
 import type { ProjectChangeSummary } from '@/types'
@@ -11,7 +11,8 @@ import { mockUsers } from '@/data/mockData'
 const router = useRouter()
 const store = useProjectStore()
 
-const comparisonDate = ref<string>(format(subDays(new Date(), 7), 'yyyy-MM-dd'))
+// Sync with store's lastReviewDate
+const comparisonDate = computed(() => format(store.lastReviewDate, 'yyyy-MM-dd'))
 const filterOwner = ref<string>('All')
 
 const projectsForReview = computed(() => {
@@ -63,6 +64,11 @@ function updateComparisonDate(event: Event) {
   store.setLastReviewDate(new Date(target.value))
 }
 
+function markReviewComplete() {
+  // Set the "since" date to now - next time you review, only changes after this moment will show
+  store.setLastReviewDate(new Date())
+}
+
 function navigateToProject(projectId: string) {
   router.push(`/project/${projectId}`)
 }
@@ -94,9 +100,19 @@ function isExpanded(projectId: string): boolean {
 
 <template>
   <div class="max-w-5xl mx-auto">
-    <div class="mb-6">
-      <h1 class="text-2xl font-semibold text-surface-800">PM Review</h1>
-      <p class="text-sm text-surface-500 mt-1">Weekly project status review</p>
+    <div class="flex items-start justify-between mb-6">
+      <div>
+        <h1 class="text-2xl font-semibold text-surface-800">PM Review</h1>
+        <p class="text-sm text-surface-500 mt-1">
+          Showing changes since <span class="font-medium text-surface-700">{{ format(store.lastReviewDate, 'MMM d, yyyy') }}</span>
+        </p>
+      </div>
+      <button 
+        @click="markReviewComplete"
+        class="btn-primary text-sm"
+      >
+        Mark Review Complete
+      </button>
     </div>
 
     <!-- Owner Filter - horizontal scroll on mobile -->
@@ -150,12 +166,13 @@ function isExpanded(projectId: string): boolean {
         </div>
       </div>
       <div class="card p-3">
-        <div class="text-xs text-surface-500">Since</div>
+        <div class="text-xs text-surface-500">Compare Since</div>
         <input 
           type="date"
           :value="comparisonDate"
           @change="updateComparisonDate"
           class="input text-sm py-0.5 px-1 mt-0.5 w-full"
+          title="Change the comparison date to see older changes"
         />
       </div>
     </div>
@@ -231,20 +248,29 @@ function isExpanded(projectId: string): boolean {
 
         <!-- Expanded Content -->
         <div v-if="isExpanded(summary.project.id)" class="border-t border-surface-200">
-          <!-- Change Summary -->
-          <div class="px-4 py-3 bg-surface-50 flex items-center gap-6 text-sm">
-            <div class="flex items-center gap-1">
-              <span class="text-surface-500">Tasks Added:</span>
-              <span class="font-medium">{{ summary.tasksAdded }}</span>
-            </div>
-            <div class="flex items-center gap-1">
-              <span class="text-surface-500">Completed:</span>
-              <span class="font-medium">{{ summary.tasksCompleted }}</span>
-            </div>
-            <div class="flex items-center gap-1">
-              <span class="text-surface-500">Owner:</span>
-              <div class="w-5 h-5 bg-primary-100 rounded-full flex items-center justify-center">
-                <span class="text-[10px] font-medium text-primary-700">{{ summary.project.owner }}</span>
+          <!-- Change Summary - since last review -->
+          <div class="px-4 py-3 bg-surface-50 border-b border-surface-200">
+            <div class="text-xs text-surface-500 mb-2">Changes since last review:</div>
+            <div class="flex items-center gap-6 text-sm">
+              <div class="flex items-center gap-1">
+                <span 
+                  :class="summary.tasksAdded > 0 ? 'text-emerald-600 font-medium' : 'text-surface-600'"
+                >
+                  +{{ summary.tasksAdded }} added
+                </span>
+              </div>
+              <div class="flex items-center gap-1">
+                <span 
+                  :class="summary.tasksCompleted > 0 ? 'text-primary-600 font-medium' : 'text-surface-600'"
+                >
+                  {{ summary.tasksCompleted }} completed
+                </span>
+              </div>
+              <div class="flex items-center gap-1 ml-auto">
+                <span class="text-surface-500">Owner:</span>
+                <div class="w-5 h-5 bg-primary-100 rounded-full flex items-center justify-center">
+                  <span class="text-[10px] font-medium text-primary-700">{{ summary.project.owner }}</span>
+                </div>
               </div>
             </div>
           </div>
